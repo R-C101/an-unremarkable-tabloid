@@ -35,7 +35,10 @@ def install(base: Path, minutes: int) -> str:
         plist.parent.mkdir(parents=True, exist_ok=True)
         plist.write_bytes(plistlib.dumps({
             "Label": LABEL, "ProgramArguments": cmd, "WorkingDirectory": str(base),
-            "StartInterval": minutes * 60, "RunAtLoad": True,
+            # On the clock (:00, :30...) to match the tablet's wake windows.
+            **({"StartCalendarInterval": [{"Minute": m} for m in range(0, 60, minutes)]}
+               if minutes < 60 and 60 % minutes == 0 else {"StartInterval": minutes * 60}),
+            "RunAtLoad": True,
             "StandardOutPath": str(logs / "rmdash.log"), "StandardErrorPath": str(logs / "rmdash.log"),
         }))
         uid = os.getuid()
@@ -50,8 +53,11 @@ def install(base: Path, minutes: int) -> str:
         return msg
     if os.name == "nt":
         tr = subprocess.list2cmdline(cmd)
+        import datetime as dt
+        now = dt.datetime.now()
+        start = (now + dt.timedelta(minutes=minutes - now.minute % minutes)).strftime("%H:%M")
         subprocess.run(["schtasks", "/Create", "/F", "/TN", WIN_TASK, "/SC", "MINUTE",
-                        "/MO", str(minutes), "/TR", tr], check=True)
+                        "/MO", str(minutes), "/ST", start, "/TR", tr], check=True)
         subprocess.run(["schtasks", "/Create", "/F", "/TN", WIN_TASK + "-logon", "/SC", "ONLOGON",
                         "/TR", tr], check=True)
         return f"Created scheduled tasks {WIN_TASK} (every {minutes} min) and {WIN_TASK}-logon"

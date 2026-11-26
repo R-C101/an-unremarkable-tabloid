@@ -302,7 +302,7 @@ Everything you see is [`rmdash/templates/dashboard.html`](rmdash/templates/dashb
 
 | Problem | Fix |
 |---|---|
-| `Cannot reach the tablet` | Wake the tablet (press the power button) and check it's on the same Wi-Fi. Check the IP with `rmdash tablet info` over USB, or in the tablet's Wi-Fi settings, and update `RM_HOST`. Many routers let you reserve a fixed IP for it. |
+| `Cannot reach the tablet` | It may be asleep: commands wait for its next wake-up (on the hour and half hour). Otherwise wake the tablet (press the power button) and check it's on the same Wi-Fi. Check the IP with `rmdash tablet info` over USB, or in the tablet's Wi-Fi settings, and update `RM_HOST`. Many routers let you reserve a fixed IP for it. |
 | USB: `10.11.99.1` doesn't respond | Use a cable that carries data (many only charge), plug in directly rather than through a hub, and unlock the tablet. Wi-Fi is usually easier. |
 | Authentication failed | Check the password on the tablet again; software updates can change it. Then run `rmdash tablet setup`. |
 | Dashboard is upside down | Switch `rotate` between `90` and `270`. |
@@ -318,9 +318,14 @@ Everything you see is [`rmdash/templates/dashboard.html`](rmdash/templates/dashb
 backs up your notebooks first. Showing the dashboard just stops the reMarkable app until you restore it or restart.
 reMarkable software updates don't affect it, but an update can reset the SSH password.
 
-**Does it drain the battery?** Yes, much faster than normal use. With the reMarkable app stopped, the tablet never goes to sleep, and its Wi-Fi stays on so it can receive updates.
-Expect hours to a day or so, rather than the week you'd get from normal use. Keep it on a charger like any wall display.
-The footer shows the battery level, and a "charge me" screen appears below 10%. A sleep-between-refreshes mode is on the roadmap.
+**Does it drain the battery?** Not much. Between refreshes the tablet goes into deep sleep. It wakes on the hour and
+half hour, stays awake about 3 minutes so your computer can push the new page, then sleeps again. E-ink keeps showing
+the page the whole time. The footer shows the battery level, and a "charge me" screen appears below 10%. You can turn
+sleeping off with `sleep = false` under `[tablet]`. It then stays awake (and reachable) all the time, but lasts hours rather than days.
+
+**The tablet is asleep. How do I reach it?** Any `rmdash` command that needs the tablet waits for its next wake-up
+(at most one refresh interval) and tells you when that is. Restarting the tablet (hold the power button, then turn it on)
+always brings back the normal reMarkable app, because the sleep loop doesn't survive a reboot.
 
 **Do I need to leave the tablet connected to my computer?** No. Over Wi-Fi, the computer only needs to be on and on the
 same network when a refresh happens.
@@ -348,13 +353,16 @@ your computer (every 30 min)                                         reMarkable 
 3. The PNG is uploaded over SSH ([paramiko](https://www.paramiko.org), so no system `ssh` is needed) and written atomically.
 4. On the tablet, `rmdash-show`, a 1.8 MB static Go program ([source](device/main.go)), stops the reMarkable app so it
    doesn't draw over the dashboard. It then writes the image to the framebuffer and triggers a full e-ink refresh.
+5. A small [sleep loop](rmdash/bin/sleep-loop.sh) runs as a temporary systemd unit. It puts the tablet into deep sleep
+   with a wake-up alarm set for the next refresh, so the tablet lasts days instead of hours. The scheduled job on your
+   computer runs at the same times (:00, :30), waits for the tablet to come online, and keeps it awake until the push is done.
 
 ## Roadmap
 
 Planned (all free): cricket fixtures, F1, a holiday and birthday countdown, moon phase and UV, currency rates,
 headlines and Hacker News, Wikipedia's "On this day", art or NASA picture of the day dithered for e-ink, a Wi-Fi guest
 QR code, and tablet battery in the footer. There will also be a portrait layout, a **point-and-click setup page** so
-nobody needs a terminal, and a pull mode for tablets away from a computer. Ideas and PRs are welcome. See
+nobody needs a terminal, and a pull mode for tablets away from a computer (the tablet would fetch the page itself). Ideas and PRs are welcome. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Credits and license

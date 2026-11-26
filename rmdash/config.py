@@ -26,7 +26,8 @@ DEFAULTS: dict[str, Any] = {
     "notes": {"file": "notes.md", "title": "Notes"},
     "quotes": {"enabled": True, "file": "quotes.txt"},
     "schedule": {"minutes": 30},
-    "tablet": {"host": "10.11.99.1", "user": "root", "remote_dir": "/home/root/rmdash"},
+    "tablet": {"host": "10.11.99.1", "user": "root", "remote_dir": "/home/root/rmdash",
+               "sleep": True, "awake_seconds": 180},
 }
 
 

@@ -74,8 +74,11 @@ cd device && go test ./... && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
 
 - Only write inside `/home/root/rmdash` (plus `~/.ssh/authorized_keys` during setup). Don't touch `/usr`, `/etc`,
   the root filesystem, xochitl's files, or the bootloader. Don't install Toltec/XOVI or other system mods.
-- The only system change is `systemctl stop xochitl` while the dashboard shows. `rmdash tablet restore`
-  or a reboot undoes it. Don't `systemctl disable`/`mask` xochitl.
+- The only system changes are `systemctl stop xochitl` while the dashboard shows, and the sleep loop: a transient
+  `systemd-run --unit=rmdash-sleep` unit running `/home/root/rmdash/sleep-loop.sh`. That loop writes only to kernel
+  runtime switches (`/sys/class/rtc/rtc0/wakealarm`, `/sys/power/state`). Transient units live in /run and vanish on reboot,
+  so `rmdash tablet restore` or a reboot undoes everything. Don't `systemctl disable`/`mask` xochitl, and never install
+  a persistent unit file.
 - Run `rmdash tablet backup` before anything new or risky on the device.
 - Tablet over USB: `10.11.99.1`. Wi-Fi IP: see `rmdash tablet info`.
 
@@ -85,10 +88,19 @@ cd device && go test ./... && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
 branches on `screen`. Only the sources a screen shows are fetched. `--at HH:MM` and `--battery N` (on preview and push)
 simulate time and battery. `--demo` uses `rmdash/demo.py` sample data: use it for anything that will be shared.
 
-## Battery
+## Battery and sleep
 
-With xochitl stopped, the rM1 never suspends, so it lasts hours rather than a week (measured Nov 2026: 100% → 55% in about 3.5 h).
-It must live on a charger for now. The planned fix is roadmap item 4 (rtcwake sleep between refreshes).
+With xochitl stopped the rM1 never suspends by itself, so an always-awake tablet lasts hours (measured Nov 2026:
+100% → 55% in about 3.5 h). Since then `[tablet] sleep = true` (the default) runs the sleep loop:
+
+- Wake windows are the first `awake_seconds` (180) after every `schedule.minutes` boundary of local time. The computer
+  writes its UTC offset to `/home/root/rmdash/offset` on every push.
+- The scheduled job (LaunchAgent `StartCalendarInterval` on :00/:30, schtasks `/ST` aligned, cron `*/N`) connects with
+  retries until the window ends. During a push it touches `/home/root/rmdash/busy`, which stops the loop sleeping
+  (it's ignored once 5 minutes old). `touch /home/root/rmdash/hold` keeps it awake for maintenance.
+- Manual commands (`push`, `tablet …`) wait for the next window via `Tablet.connect_when_awake`.
+- Verified on rM1 3.29: `echo mem > /sys/power/state` with an RTC alarm suspends (deep), resumes on time, Wi-Fi
+  reconnects on the same IP within seconds, and the framebuffer is unchanged (md5 before = after).
 
 ## Hardware facts
 
@@ -146,4 +158,4 @@ shows it parked in `open()`.
      tablet battery in the footer.
    Researched list with verified endpoints: docs/module-ideas.md.
 3. Cricket and multi-team sports layout, and a portrait layout pass.
-4. Pull mode (tablet fetches the PNG and sleeps with rtcwake) for setups that aren't on a charger.
+4. Pull mode (the tablet fetches the PNG itself) for setups away from the computer. Sleep between refreshes is done.

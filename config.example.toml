@@ -90,4 +90,6 @@ minutes = 30
 host = "10.11.99.1"         # USB. For Wi-Fi use the tablet's IP (see `rmdash tablet info`). RM_HOST in .env wins.
 user = "root"
 remote_dir = "/home/root/rmdash"
+sleep = true                # deep-sleep between refreshes (days of battery instead of hours)
+awake_seconds = 180         # how long it stays awake after each :00/:30 for the computer to push
 # key = "~/.ssh/remarkable_dashboard"

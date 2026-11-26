@@ -9,11 +9,13 @@ Safety rules this module follows:
 
 from __future__ import annotations
 
+import datetime as dt
 import io
 import os
 import posixpath
 import re
 import shlex
+import time
 from importlib import resources
 from pathlib import Path
 from typing import Any
@@ -60,10 +62,28 @@ def load_env(base: Path) -> dict[str, str]:
     return env
 
 
+SLEEP_UNIT = "rmdash-sleep"
+
+
+def local_offset() -> int:
+    """This computer's UTC offset in seconds (DST-aware), so wake windows follow local time."""
+    return int(dt.datetime.now().astimezone().utcoffset().total_seconds())  # type: ignore[union-attr]
+
+
+def window(every: int, awake: int, now: float | None = None) -> tuple[bool, float]:
+    """(inside an awake window?, seconds until it ends / until the next one starts)."""
+    now = time.time() if now is None else now
+    into = (now + local_offset()) % every
+    return (True, awake - into) if into < awake else (False, every - into)
+
+
 class Tablet:
     def __init__(self, cfg: dict[str, Any], base: Path):
         env = load_env(base)
         t = cfg.get("tablet", {})
+        self.every = int(cfg.get("schedule", {}).get("minutes", 30)) * 60
+        self.sleep = bool(t.get("sleep", True))
+        self.awake = int(t.get("awake_seconds", 180))
         self.host = env.get("RM_HOST") or t.get("host", "10.11.99.1")
         self.user = env.get("RM_USER") or t.get("user", "root")
         self.password = env.get("RM_PASSWORD")
@@ -73,7 +93,8 @@ class Tablet:
 
     # -- connection -------------------------------------------------------
     def __enter__(self) -> "Tablet":
-        self.connect()
+        if not self.client:
+            self.connect()
         return self
 
     def __exit__(self, *exc: object) -> None:
@@ -101,6 +122,25 @@ class Tablet:
             self.client = c
         except (OSError, paramiko.SSHException) as e:
             raise TabletError(f"Cannot reach the tablet at {self.host}: {e}") from e
+
+    def connect_when_awake(self, max_wait: float, say: Any = None) -> None:
+        """Keep trying until the tablet answers (it may be asleep until its next window)."""
+        deadline = time.time() + max_wait
+        told = False
+        while True:
+            try:
+                self.connect()
+                return
+            except TabletError:
+                if time.time() >= deadline:
+                    raise
+                if say and not told and self.sleep:
+                    inside, secs = window(self.every, self.awake)
+                    wait = 0 if inside else secs
+                    when = (dt.datetime.now() + dt.timedelta(seconds=wait)).strftime("%H:%M")
+                    say(f"The tablet is asleep. It wakes at {when}; waiting (Ctrl+C to stop)...")
+                    told = True
+                time.sleep(5)
 
     def run(self, command: str, check: bool = True, stdin: bytes | None = None) -> str:
         assert self.client, "not connected"
@@ -143,7 +183,8 @@ class Tablet:
             "echo battery=$(cat $d/capacity)% && echo charging=$(cat $d/status) && break; done;"
             "echo wifi_ip=$(ip -4 -o addr show wlan0 2>/dev/null | awk '{print $4}');"
             "echo free_home=$(df -h /home | awk 'NR==2{print $4}');"
-            f"echo installed=$(test -x {self.remote_dir}/rmdash-show && echo yes || echo no)"
+            f"echo installed=$(test -x {self.remote_dir}/rmdash-show && echo yes || echo no);"
+            f"echo sleep_loop=$(systemctl is-active {SLEEP_UNIT})"
         )
         out = self.run(script, check=False)
         return dict(ln.split("=", 1) for ln in out.splitlines() if "=" in ln)
@@ -174,18 +215,48 @@ class Tablet:
         self.put(binary, posixpath.join(self.remote_dir, "rmdash-show"), mode="755")
         return self.run(f"{shlex.quote(self.remote_dir)}/rmdash-show -info").strip()
 
+    def busy(self, on: bool) -> None:
+        """While a push is in progress the sleep loop stays awake."""
+        f = shlex.quote(posixpath.join(self.remote_dir, "busy"))
+        self.run(f"mkdir -p {shlex.quote(self.remote_dir)} && touch {f}" if on else f"rm -f {f}", check=False)
+
     def show(self, png: bytes) -> str:
         d = shlex.quote(self.remote_dir)
         if self.run(f"test -x {d}/rmdash-show && echo yes", check=False).strip() != "yes":
             self.install()
         self.put(png, posixpath.join(self.remote_dir, "dashboard.png"))
         # Stop the normal UI so it doesn't paint over the dashboard, then draw.
-        return self.run(
+        out = self.run(
             "if systemctl is-active --quiet xochitl; then systemctl stop xochitl; sleep 2; fi; "
             f"{d}/rmdash-show {d}/dashboard.png"
         ).strip()
+        if self.sleep:
+            self.start_sleeping()
+        else:
+            self.stop_sleeping()
+        return out
+
+    def start_sleeping(self) -> None:
+        """(Re)start the sleep loop as a transient unit: it disappears on reboot."""
+        script = resources.files("rmdash").joinpath("bin/sleep-loop.sh").read_bytes()
+        path = posixpath.join(self.remote_dir, "sleep-loop.sh")
+        self.put(str(local_offset()).encode(), posixpath.join(self.remote_dir, "offset"))
+        current = self.run(f"cat {shlex.quote(path)} 2>/dev/null", check=False).encode()
+        active = self.run(f"systemctl is-active {SLEEP_UNIT}", check=False).strip() == "active"
+        args = f"{self.every} {self.awake}"
+        running_args = self.run(f"systemctl show -p ExecStart --value {SLEEP_UNIT} 2>/dev/null", check=False)
+        if active and current == script and f"sleep-loop.sh {args} " in running_args + " ":
+            return
+        self.stop_sleeping()
+        self.put(script, path, mode="755")
+        self.run(f"systemd-run --unit={SLEEP_UNIT} --collect /bin/sh {shlex.quote(path)} {args}")
+
+    def stop_sleeping(self) -> None:
+        self.run(f"systemctl stop {SLEEP_UNIT} 2>/dev/null; systemctl reset-failed {SLEEP_UNIT} 2>/dev/null; true",
+                 check=False)
 
     def restore(self) -> None:
+        self.stop_sleeping()
         self.run("systemctl start xochitl")
 
     def backup(self, dest: Path) -> int:

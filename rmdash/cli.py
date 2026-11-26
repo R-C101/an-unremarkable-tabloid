@@ -74,27 +74,46 @@ def last_battery(base: Path) -> dict | None:
 
 def cmd_push(a: argparse.Namespace, quiet_offline: bool = False) -> None:
     cfg = config.load(a.dir / "config.toml")
+    t = device.Tablet(cfg, a.dir)
     try:
-        with device.Tablet(cfg, a.dir) as t:
-            battery = t.battery()  # read first, so a low battery gets the charge-me screen
-            if battery:
-                (a.dir / "out").mkdir(exist_ok=True)
-                (a.dir / "out" / "battery.json").write_text(json.dumps(battery))
-            if getattr(a, "battery_pct", None) is not None:
-                battery = {"level": a.battery_pct, "charging": False}
-            if getattr(a, "demo", False):  # sample data only: safe to photograph and share
-                from rmdash import demo
-                fake = {"level": a.battery_pct, "charging": False} if a.battery_pct is not None else None
-                panel, _ = render.render(demo.collect(a.dir, battery=fake, at=a.at), a.dir / "out" / "demo")
-            else:
-                panel, _ = build(a.dir, battery=battery, at=getattr(a, "at", None))
-            t.show(panel.read_bytes())
-        log("dashboard updated on the tablet")
+        if quiet_offline:  # scheduled run: only bother while the tablet is in its awake window
+            inside, secs = device.window(t.every, t.awake)
+            t.connect_when_awake(max_wait=max(secs - 20, 0) if (inside and t.sleep) else 0)
+        else:  # by hand: wait for the next window if it's asleep
+            t.connect_when_awake(max_wait=t.every + t.awake if t.sleep else 0, say=log)
     except device.TabletError as e:
         if quiet_offline:
             log(f"tablet not reachable, will try next time ({e})")
             return
         sys.exit(str(e))
+    try:
+        t.busy(True)  # keep it awake while we render and upload
+        battery = t.battery()  # read first, so a low battery gets the charge-me screen
+        if battery:
+            (a.dir / "out").mkdir(exist_ok=True)
+            (a.dir / "out" / "battery.json").write_text(json.dumps(battery))
+        if getattr(a, "demo", False):  # sample data only: safe to photograph and share
+            from rmdash import demo
+            fake = {"level": a.battery_pct, "charging": False} if a.battery_pct is not None else None
+            panel, _ = render.render(demo.collect(a.dir, battery=fake, at=a.at), a.dir / "out" / "demo")
+        else:
+            if getattr(a, "battery_pct", None) is not None:
+                battery = {"level": a.battery_pct, "charging": False}
+            panel, _ = build(a.dir, battery=battery, at=getattr(a, "at", None))
+        t.show(panel.read_bytes())
+        log("dashboard updated on the tablet" + (" (sleeping until the next refresh)" if t.sleep else ""))
+    except device.TabletError as e:
+        if quiet_offline:
+            log(f"push failed, will try next time ({e})")
+            return
+        sys.exit(str(e))
+    finally:
+        try:
+            t.busy(False)
+        except Exception:  # noqa: BLE001
+            pass
+        if t.client:
+            t.client.close()
 
 
 def cmd_run(a: argparse.Namespace) -> None:
@@ -109,7 +128,10 @@ def tablet(a: argparse.Namespace) -> device.Tablet:
 def cmd_tablet(a: argparse.Namespace) -> None:
     t = tablet(a)
     try:
+        t.connect_when_awake(max_wait=t.every + t.awake if t.sleep else 0, say=print)
         with t:
+            if a.action in ("setup", "backup"):
+                t.busy(True)  # these take a while: don't let it fall asleep mid-way
             if a.action == "info":
                 for k, v in t.info().items():
                     print(f"{k:>10}: {v}")
@@ -122,6 +144,7 @@ def cmd_tablet(a: argparse.Namespace) -> None:
                 size = t.backup(dest)
                 print(f"Backed up documents to {dest} ({size / 1e6:.1f} MB)")
                 print("Screen:", t.install())
+                t.busy(False)
                 print("Ready. Next: rmdash push")
             elif a.action == "restore":
                 t.restore()
@@ -129,6 +152,7 @@ def cmd_tablet(a: argparse.Namespace) -> None:
             elif a.action == "backup":
                 dest = a.dir / "backup" / f"xochitl-{dt.datetime.now():%Y%m%d-%H%M%S}.tar"
                 print(f"Saved {t.backup(dest) / 1e6:.1f} MB to {dest}")
+                t.busy(False)
             elif a.action == "uninstall":
                 t.uninstall()
                 print("Removed rmdash from the tablet and restarted the normal interface")
