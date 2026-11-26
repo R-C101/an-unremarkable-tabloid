@@ -62,7 +62,8 @@ cd device && go test ./... && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
 
 - reMarkable 1: i.MX6 SoloLite, armv7l, framebuffer `/dev/fb0` is 1404×1872 visible, RGB565
   (line length is usually 1408 px). Refresh uses `MXCFB_SEND_UPDATE` (0x4048462E), GC16 waveform, full update.
-- The user's tablet is a reMarkable 1. Firmware was 3.0.4, then auto-updated to 3.11.2.5 (Nov 2026).
+- The user's tablet is a reMarkable 1 on firmware 3.29.1.0 (kernel 5.4.70). Verified working over Wi-Fi SSH (Nov 2026).
+  Stopping xochitl leaves Wi-Fi (wpa_supplicant) up. xochitl is Restart=on-failure, so a clean stop stays stopped.
 - reMarkable 2 uses a different display path (needs rm2fb), so `rmdash-show` won't drive its screen yet.
 
 ## Design notes for the template
