@@ -25,6 +25,10 @@ Ground rules for data sources: they must be **free** for one person refreshing e
 human in the loop**, and not scrape sites whose terms forbid it. A free API key is fine. Unofficial endpoints are
 fine if they're labelled as such. [docs/module-ideas.md](docs/module-ideas.md) lists researched, verified candidates.
 
+## Supporting another reMarkable
+
+See [docs/porting.md](docs/porting.md).
+
 ## Tablet code
 
 `device/main.go` builds `unremarkable/bin/tabloid-show-armv7`. After changing it:

@@ -63,7 +63,9 @@ More modules are planned; see [Roadmap](#roadmap).
 | **reMarkable Paper Pro / Paper Pro Move** | ❌ Not yet | SSH is only available in *developer mode*, and turning that on **factory-resets the tablet**. It's a different chip (64-bit) with a colour screen and different display hardware. Help wanted. |
 
 `tabloid tablet setup` checks the model and refuses to install on a tablet it can't drive, so trying it is harmless.
-If you have an rM2 or Paper Pro and want to help, [open an issue](../../issues/new/choose).
+**Have an rM2 or Paper Pro?** You can probably add support in an evening with a coding agent: see
+[docs/porting.md](docs/porting.md) for a ready-to-paste prompt and the safety rules, or
+[open an issue](../../issues/new?template=device_support.md) with what you find.
 
 ## Quick start
 
@@ -438,7 +440,8 @@ Contributions are welcome, from a typo fix to a whole new module.
   `tabloid preview --demo` are safe to share; don't paste your `.env` or `config.toml`.
 - **Want a feature or a new module?** [Open a feature request](../../issues/new?template=feature_request.md) or
   [suggest a module](../../issues/new?template=module_idea.md). Ideas are welcome even if you can't build them.
-- **Have an rM2 or Paper Pro?** Tell us in an issue. Testing on real hardware is the main thing blocking support.
+- **Have an rM2 or Paper Pro?** That's the most wanted help. See [docs/porting.md](docs/porting.md): clone it, point
+  Claude Code or another agent at it with the prompt there, and share what you find.
 - **Want to code?** See [CONTRIBUTING.md](CONTRIBUTING.md). You don't need a tablet to work on modules or the design.
 
 If you like it, a ⭐ on the repo helps other reMarkable owners find it.
