@@ -79,6 +79,17 @@ cd device && go test ./... && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
 - Run `rmdash tablet backup` before anything new or risky on the device.
 - Tablet over USB: `10.11.99.1`. Wi-Fi IP: see `rmdash tablet info`.
 
+## Timed screens
+
+`rmdash/screens.py` picks `morning` / `day` / `night` / `lowbattery` from `[screens]` windows and the battery. The template
+branches on `screen`. Only the sources a screen shows are fetched. `--at HH:MM` and `--battery N` (on preview and push)
+simulate time and battery. `--demo` uses `rmdash/demo.py` sample data: use it for anything that will be shared.
+
+## Battery
+
+With xochitl stopped, the rM1 never suspends, so it lasts hours rather than a week (measured Nov 2026: 100% → 55% in about 3.5 h).
+It must live on a charger for now. The planned fix is roadmap item 4 (rtcwake sleep between refreshes).
+
 ## Hardware facts
 
 - reMarkable 1: i.MX6 SoloLite, armv7l, framebuffer `/dev/fb0` is 1404×1872 visible, RGB565
@@ -111,6 +122,11 @@ shows it parked in `open()`.
 | Calendar | any iCal/ICS URL (Google secret address, iCloud, Outlook) | no | built |
 | Tasks | TickTick Open API, `rmdash ticktick login` (OAuth, tasks:read) | free dev app | built, needs login |
 | Sports, any ESPN team (soccer, NBA, NFL, MLB, NHL, college) | ESPN public site API, `rmdash sports search` | no | built |
+| XKCD (morning, night) | `xkcd.com/info.0.json`, image embedded as a data: URI | no | built |
+| Headlines (morning) | any RSS/Atom feed (`sources/extras.py`), near-duplicates dropped | no | built |
+| On this day (night) | `api.wikimedia.org/feed/v1/wikipedia/en/onthisday/selected/MM/DD` | no | built |
+| Today at a glance (day) | computed (`data.glance`): next meeting, task counts, progress bars | no | built |
+| Battery + low-battery screen | `/sys/class/power_supply/*/capacity` over SSH, read before render | no | built |
 | Notes / quotes | local `notes.md` / `quotes.txt` | no | built |
 
 ## Roadmap (agreed with the user, Nov 2026)

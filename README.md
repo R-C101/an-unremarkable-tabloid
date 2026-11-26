@@ -8,6 +8,16 @@ the last page stays on the screen, because e-ink needs no power to hold an image
 
 <sub>Rendered with `rmdash preview --demo` (sample data). On the tablet it's 16 shades of grey at 226 dpi.</sub>
 
+### It changes through the day
+
+| Morning (until 9:30) | Day | Night (from 9:30 PM) | Battery low |
+|---|---|---|---|
+| ![Morning screen](docs/screen-morning.png) | ![Day screen](docs/preview.png) | ![Night screen](docs/screen-night.png) | ![Low battery screen](docs/screen-lowbattery.png) |
+| "Good morning, Alex", today's meetings, what's due, headlines, XKCD | Sports, calendar, to-dos, and "Today at a glance": next meeting countdown and day/week/year progress | "Good night", tomorrow's meetings, tasks and weather, On this day, XKCD | A sad battery asks to be plugged in |
+
+The masthead also says "Good afternoon" and "Good evening" for one refresh when each begins, then goes back to your title.
+All times are configurable under `[screens]`.
+
 - **Doesn't change the tablet's system.** It uses the tablet's built-in SSH and puts one small program in `/home/root/rmdash`. No jailbreak, Toltec or system mods.
 - **Reversible in one command.** `rmdash tablet restore`, or just a restart, brings back the normal reMarkable app with your notebooks untouched.
 - **Free.** Every data source is free, and most don't need an account.
@@ -24,6 +34,11 @@ the last page stays on the screen, because e-ink needs no power to hold an image
 | Calendar: today and the next few days | Any iCal link: Google, iCloud, Outlook, public holidays | none |
 | To-do lists, one column per list | [TickTick](https://ticktick.com) Open API (read-only) | free developer app |
 | Next match, last result, league position | ESPN's public scores feed: football, NBA, NFL, MLB, NHL, college… | none |
+| XKCD comic (morning and night) | [xkcd.com](https://xkcd.com) JSON | none |
+| Headlines from any RSS/Atom feed (morning) | Hacker News, BBC, Google News for your country or a search | none |
+| On this day (night) | Wikipedia / Wikimedia feed | none |
+| Today at a glance: next meeting, task counts, day/week/year progress | Computed from your calendar and tasks | none |
+| Tablet battery, and a "charge me" screen when low | Read from the tablet over SSH | none |
 | Notes and a quote of the day | `notes.md` and `quotes.txt` in this folder | none |
 
 Turn any of them on or off in `config.toml`. If a source is down, that section is skipped and the rest still renders.
@@ -197,6 +212,45 @@ team_id = 83
 The strip shows the next fixture (all competitions for football clubs), the last result and the league position.
 Repeat the block to follow more teams. Cricket isn't covered by ESPN's feed yet; it's on the roadmap.
 
+### Timed screens, greetings and battery
+
+```toml
+[dashboard]
+name = "Alex"              # "Good morning, Alex"
+
+[screens]
+morning = "05:00-09:30"    # "HH:MM-HH:MM", may wrap past midnight; "" turns a screen off
+night = "21:30-05:00"
+greet = true               # "Good afternoon/evening" for one refresh at 12:00 and 17:00
+
+[battery]
+low = 10                   # at or below this, and not charging, show the "I need a charge" screen
+
+[headlines]
+per_feed = 4
+feeds = [
+  { name = "Tech", url = "https://hnrss.org/frontpage?points=50" },
+  { name = "India", url = "https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en" },
+]
+```
+
+Preview any screen without waiting for the clock: `rmdash preview --at 07:30`, `--at 22:30` or `--battery 7`.
+
+### Showing it off without showing your life
+
+`rmdash preview --demo` and `rmdash push --demo` use a made-up city, calendar, to-do lists and fixture. Use them for screenshots, photos and bug reports.
+Combine them with `--at` and `--battery` to put each screen on the tablet in turn:
+
+```sh
+uv run rmdash push --demo --at 07:30      # morning
+uv run rmdash push --demo --at 11:00      # day
+uv run rmdash push --demo --at 22:30      # night
+uv run rmdash push --demo --battery 7     # low battery
+uv run rmdash push                        # back to your real dashboard
+```
+
+The next scheduled refresh also brings your real dashboard back.
+
 ### Title, notes and quotes
 
 - `title` under `[dashboard]` sets the masthead. *The Smith Times*, *Daily Planet*, *Casa Gomez*: make it yours.
@@ -224,6 +278,8 @@ All commands are `uv run rmdash …`, run from the project folder.
 |---|---|
 | `preview` | Render to `out/preview.png` without touching the tablet |
 | `preview --demo` | Render with sample data (good for screenshots and bug reports) |
+| `preview --at 07:30` / `--battery 7` | Preview the morning, night or low-battery screen |
+| `push --demo` | Show the sample dashboard on the tablet (for photos) |
 | `push` | Update the tablet now |
 | `tablet info` | Model, firmware, battery, Wi-Fi IP |
 | `tablet restore` | Bring the normal reMarkable app back |
@@ -262,8 +318,9 @@ Everything you see is [`rmdash/templates/dashboard.html`](rmdash/templates/dashb
 backs up your notebooks first. Showing the dashboard just stops the reMarkable app until you restore it or restart.
 reMarkable software updates don't affect it, but an update can reset the SSH password.
 
-**Does it drain the battery?** The tablet stays awake on Wi-Fi so it can receive updates. Keep it on a charger,
-like any wall display.
+**Does it drain the battery?** Yes, much faster than normal use. With the reMarkable app stopped, the tablet never goes to sleep, and its Wi-Fi stays on so it can receive updates.
+Expect hours to a day or so, rather than the week you'd get from normal use. Keep it on a charger like any wall display.
+The footer shows the battery level, and a "charge me" screen appears below 10%. A sleep-between-refreshes mode is on the roadmap.
 
 **Do I need to leave the tablet connected to my computer?** No. Over Wi-Fi, the computer only needs to be on and on the
 same network when a refresh happens.

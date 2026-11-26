@@ -4,8 +4,20 @@
 
 [dashboard]
 title = "The Morning Edition"   # the masthead. Make it yours: "The Smith Times", "Daily Planet"...
+name = ""                   # your first name, for "Good morning, Alex". Leave empty for just "Good morning".
 orientation = "landscape"   # "landscape" or "portrait"
 rotate = 90                 # landscape only: 90 or 270. If it's upside down, switch it.
+
+[screens]
+# The dashboard changes through the day. Times are "HH:MM-HH:MM" and may wrap past midnight.
+# Outside these windows you get the normal (day) dashboard.
+morning = "05:00-09:30"     # greeting, today's meetings, what's due, headlines, On this day
+night = "21:30-05:00"       # tomorrow's plan, tomorrow's weather, an XKCD
+greet = true                # day screen says "Good afternoon/evening" for one refresh at 12:00 and 17:00
+
+[battery]
+show = true                 # tablet battery in the footer
+low = 10                    # at or below this (and not charging): the "I need a charge" screen
 
 [location]                  # used for weather and air quality
 name = "New York, NY"
@@ -45,6 +57,23 @@ max_items = 7               # per list (the layout trims more if space runs out)
 # sport = "soccer"
 # league = "eng.1"
 # team_id = 359
+
+[xkcd]
+enabled = true              # latest comic: bottom-left by day, big at night
+
+[onthisday]
+enabled = true              # Wikipedia's "On this day", on the morning screen
+items = 3
+
+[headlines]                 # RSS or Atom feeds, side by side on the morning screen
+enabled = true
+per_feed = 4
+feeds = [
+  { name = "Tech", url = "https://hnrss.org/frontpage?points=50" },
+  { name = "World", url = "https://feeds.bbci.co.uk/news/world/rss.xml" },
+  # Google News for your country:  https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en
+  # Google News for a topic:       https://news.google.com/rss/search?q=%22sports+analytics%22+when:7d
+]
 
 [notes]
 file = "notes.md"           # one item per line; shown as a list

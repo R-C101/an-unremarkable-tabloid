@@ -248,8 +248,46 @@ def day_label(day: dt.date, today: dt.date) -> str:
     return day.strftime("%A")
 
 
-def collect(cfg: dict[str, Any], base: Path) -> dict[str, Any]:
+def _span(m: int) -> str:
+    return f"{m} min" if m < 60 else f"{m // 60} h {m % 60} min" if m % 60 else f"{m // 60} h"
+
+
+def glance(cfg: dict[str, Any], now: dt.datetime, ctx: dict[str, Any]) -> dict[str, Any]:
+    """'Today at a glance': next meeting, task counts, and day/week/year progress."""
+    upcoming = [e for e in ((ctx.get("calendar") or {}).get("today") or [])
+                if not e["all_day"] and e.get("start") and e["start"] > now]
+    nxt = None
+    if upcoming:
+        e = upcoming[0]
+        nxt = {"title": e["title"], "time": e["time"], "in": _span(int((e["start"] - now).total_seconds() // 60))}
+    a, b = (int(x[:2]) * 60 + int(x[3:]) for x in cfg["glance"]["workday"].split("-"))
+    m = now.hour * 60 + now.minute
+    day = min(max((m - a) / (b - a), 0), 1) if b > a else 0
+    week = (now.weekday() + m / 1440) / 7
+    y0 = dt.datetime(now.year, 1, 1, tzinfo=now.tzinfo)
+    year = (now - y0) / (dt.datetime(now.year + 1, 1, 1, tzinfo=now.tzinfo) - y0)
+    items = (ctx.get("tasks") or {}).get("items", [])
+    return {
+        "next": nxt, "meetings_left": len(upcoming),
+        "overdue": sum(1 for i in items if i.get("when") == "Overdue"),
+        "due_today": sum(1 for i in items if str(i.get("when", "")).startswith("Today")),
+        "high": sum(1 for i in items if i.get("high")),
+        "bars": [
+            {"label": "Workday", "pct": round(day * 100),
+             "note": "not started" if m < a else "done" if m >= b else f"{_span(b - m)} left"},
+            {"label": f"Week {now.isocalendar().week}", "pct": round(week * 100), "note": now.strftime("%A")},
+            {"label": str(now.year), "pct": round(year * 100), "note": f"{(dt.date(now.year, 12, 31) - now.date()).days} days left"},
+        ],
+    }
+
+
+def collect(cfg: dict[str, Any], base: Path, battery: dict[str, Any] | None = None,
+            at: dt.time | None = None) -> dict[str, Any]:
+    """Gather everything for one render. `battery` comes from the tablet; `at`
+    pretends it's that time of day (for previewing the timed screens)."""
+    from rmdash import screens
     from rmdash.device import load_env
+    from rmdash.sources import extras
     from rmdash.sources.sports import sports
     from rmdash.sources.ticktick import tasks
 
@@ -264,8 +302,28 @@ def collect(cfg: dict[str, Any], base: Path) -> dict[str, Any]:
         tz_name = cfg["location"].get("timezone", "auto")
         tz = ZoneInfo(tz_name) if tz_name != "auto" else dt.datetime.now().astimezone().tzinfo
     now = dt.datetime.now(tz)
+    if at:
+        now = now.replace(hour=at.hour, minute=at.minute)
     ctx["now"] = now
     ctx["updated"] = fmt_time(now)
+    ctx["battery"] = battery if cfg["battery"].get("show", True) else None
+    ctx.update(screens.pick(cfg, now, battery))
+    screen = ctx["screen"]
+
+    def soft(key: str, label: str, fn: Any, *args: Any) -> None:
+        try:
+            ctx[key] = fn(*args)
+        except Exception as e:  # noqa: BLE001 - one dead source must not blank the page
+            ctx[key] = None
+            ctx["problems"].append(f"{label} unavailable ({type(e).__name__})")
+
+    ctx["xkcd"] = ctx["onthisday"] = ctx["headlines"] = None
+    if cfg["xkcd"].get("enabled") and screen in ("morning", "night"):
+        soft("xkcd", "XKCD", extras.xkcd)
+    if cfg["onthisday"].get("enabled") and screen == "night":
+        soft("onthisday", "On this day", extras.on_this_day, now.date(), int(cfg["onthisday"]["items"]))
+    if cfg["headlines"].get("enabled") and cfg["headlines"].get("feeds") and screen == "morning":
+        soft("headlines", "Headlines", extras.headlines, cfg["headlines"]["feeds"], int(cfg["headlines"]["per_feed"]))
 
     if cfg.get("air_quality", {}).get("enabled", True):
         try:
@@ -291,6 +349,14 @@ def collect(cfg: dict[str, Any], base: Path) -> dict[str, Any]:
     except Exception as e:  # noqa: BLE001
         ctx["tasks"] = None
         ctx["problems"].append(f"TickTick unavailable ({type(e).__name__})")
+
+    # Morning shows what's due today; night shows what's due tomorrow.
+    items = (ctx["tasks"] or {}).get("items", [])
+    today = now.date()
+    ctx["due_today"] = [i for i in items if i["due"] and i["due"].date() <= today]
+    ctx["due_tomorrow"] = [i for i in items if i["due"] and i["due"].date() <= today + dt.timedelta(days=1)]
+
+    ctx["glance"] = glance(cfg, now, ctx) if cfg["glance"].get("enabled") and screen == "day" else None
 
     n = cfg.get("notes", {})
     ctx["notes_title"] = n.get("title", "Notes")

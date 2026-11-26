@@ -148,6 +148,14 @@ class Tablet:
         out = self.run(script, check=False)
         return dict(ln.split("=", 1) for ln in out.splitlines() if "=" in ln)
 
+    def battery(self) -> dict[str, Any] | None:
+        """{'level': 0-100, 'charging': bool}, read from the fuel gauge in /sys (read-only)."""
+        out = self.run("for d in /sys/class/power_supply/*; do [ -f $d/capacity ] && "
+                       "echo $(cat $d/capacity) $(cat $d/status) && break; done", check=False).split()
+        if not out or not out[0].isdigit():
+            return None
+        return {"level": int(out[0]), "charging": len(out) > 1 and out[1] in ("Charging", "Full")}
+
     def install_key(self) -> None:
         pub = Path(str(self.key_path) + ".pub")
         if not self.key_path.exists():

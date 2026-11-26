@@ -7,7 +7,16 @@ from pathlib import Path
 from typing import Any
 
 DEFAULTS: dict[str, Any] = {
-    "dashboard": {"title": "The House", "orientation": "landscape", "rotate": 90},
+    "dashboard": {"title": "The Morning Edition", "name": "", "orientation": "landscape", "rotate": 90},
+    "screens": {"morning": "05:00-09:30", "night": "21:30-05:00", "greet": True},
+    "battery": {"show": True, "low": 10},
+    "glance": {"enabled": True, "workday": "09:30-19:00"},
+    "xkcd": {"enabled": True},
+    "onthisday": {"enabled": True, "items": 3},
+    "headlines": {"enabled": True, "per_feed": 4, "feeds": [
+        {"name": "Hacker News", "url": "https://hnrss.org/frontpage?points=50"},
+        {"name": "World", "url": "https://feeds.bbci.co.uk/news/world/rss.xml"},
+    ]},
     "location": {"name": "", "latitude": None, "longitude": None, "timezone": "auto"},
     "units": {"temperature": "fahrenheit", "aqi": "us"},
     "air_quality": {"enabled": True},

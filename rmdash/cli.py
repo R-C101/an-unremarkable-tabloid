@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import os
 import re
 import shutil
@@ -27,9 +28,9 @@ def open_file(p: Path) -> None:
         subprocess.run(["xdg-open", str(p)])
 
 
-def build(base: Path) -> tuple[Path, Path]:
+def build(base: Path, battery: dict | None = None, at: dt.time | None = None) -> tuple[Path, Path]:
     cfg = config.load(base / "config.toml")
-    ctx = data.collect(cfg, base)
+    ctx = data.collect(cfg, base, battery=battery, at=at)
     for p in ctx["problems"]:
         log(f"warning: {p}")
     return render.render(ctx, base / "out")
@@ -55,21 +56,38 @@ def cmd_init(a: argparse.Namespace) -> None:
 
 
 def cmd_preview(a: argparse.Namespace) -> None:
-    if a.demo:
+    battery = {"level": a.battery, "charging": False} if a.battery is not None else None
+    if a.demo:  # sample data and a made-up battery level, so screenshots are safe to share
         from rmdash import demo
-        panel, preview = render.render(demo.collect(a.dir), a.dir / "out" / "demo")
+        panel, preview = render.render(demo.collect(a.dir, battery=battery, at=a.at), a.dir / "out" / "demo")
     else:
-        panel, preview = build(a.dir)
+        panel, preview = build(a.dir, battery=battery or last_battery(a.dir), at=a.at)
     print(f"Preview: {preview}\nPanel image: {panel}")
     if not a.no_open:
         open_file(preview)
 
 
+def last_battery(base: Path) -> dict | None:
+    f = base / "out" / "battery.json"
+    return json.loads(f.read_text()) if f.exists() else None
+
+
 def cmd_push(a: argparse.Namespace, quiet_offline: bool = False) -> None:
-    panel, _ = build(a.dir)
     cfg = config.load(a.dir / "config.toml")
     try:
         with device.Tablet(cfg, a.dir) as t:
+            battery = t.battery()  # read first, so a low battery gets the charge-me screen
+            if battery:
+                (a.dir / "out").mkdir(exist_ok=True)
+                (a.dir / "out" / "battery.json").write_text(json.dumps(battery))
+            if getattr(a, "battery_pct", None) is not None:
+                battery = {"level": a.battery_pct, "charging": False}
+            if getattr(a, "demo", False):  # sample data only: safe to photograph and share
+                from rmdash import demo
+                fake = {"level": a.battery_pct, "charging": False} if a.battery_pct is not None else None
+                panel, _ = render.render(demo.collect(a.dir, battery=fake, at=a.at), a.dir / "out" / "demo")
+            else:
+                panel, _ = build(a.dir, battery=battery, at=getattr(a, "at", None))
             t.show(panel.read_bytes())
         log("dashboard updated on the tablet")
     except device.TabletError as e:
@@ -147,6 +165,10 @@ def cmd_schedule(a: argparse.Namespace) -> None:
         print(schedule.status())
 
 
+def hhmm(v: str) -> dt.time:
+    return dt.time.fromisoformat(v if len(v) > 2 else v + ":00")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(prog="rmdash", description="reMarkable home dashboard")
     p.add_argument("--dir", type=Path, default=Path.cwd(), help="project folder (default: current)")
@@ -160,9 +182,15 @@ def main() -> None:
     s = sub.add_parser("preview", help="render the dashboard to out/preview.png")
     s.add_argument("--no-open", action="store_true")
     s.add_argument("--demo", action="store_true", help="use sample data (no config or accounts needed)")
+    s.add_argument("--at", type=hhmm, help="pretend it's this time, e.g. 07:30, to see the timed screens")
+    s.add_argument("--battery", type=int, help="pretend the tablet battery is at this %%")
     s.set_defaults(fn=cmd_preview)
 
-    sub.add_parser("push", help="render and show it on the tablet now").set_defaults(fn=cmd_push)
+    s = sub.add_parser("push", help="render and show it on the tablet now")
+    s.add_argument("--at", type=hhmm, help="pretend it's this time, e.g. 22:00")
+    s.add_argument("--demo", action="store_true", help="show the sample dashboard (nothing personal) on the tablet")
+    s.add_argument("--battery", dest="battery_pct", type=int, help="pretend the battery is at this %%")
+    s.set_defaults(fn=cmd_push)
     sub.add_parser("run", help="what the scheduler runs (push, quiet if offline)").set_defaults(fn=cmd_run)
 
     s = sub.add_parser("tablet", help="tablet setup and maintenance")

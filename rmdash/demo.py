@@ -14,7 +14,7 @@ from typing import Any
 from rmdash import config, data
 
 DEMO_CONFIG = {
-    "dashboard": {"title": "The Morning Edition"},
+    "dashboard": {"title": "The Morning Edition", "name": "Alex"},
     "location": {"name": "Brooklyn, NY", "latitude": 40.6782, "longitude": -73.9442,
                  "timezone": "America/New_York"},
     "units": {"temperature": "fahrenheit", "aqi": "us"},
@@ -23,22 +23,24 @@ DEMO_CONFIG = {
 }
 
 
-def _ev(title: str, time: str | None = None) -> dict[str, Any]:
-    return {"title": title, "time": time or "All day", "all_day": time is None}
+def _ev(title: str, time: str | None = None, start: dt.datetime | None = None) -> dict[str, Any]:
+    return {"title": title, "time": time or "All day", "all_day": time is None, "start": start}
 
 
 def _task(title: str, when: str = "", high: bool = False) -> dict[str, Any]:
     return {"title": title, "when": when, "high": high}
 
 
-def collect(base: Path) -> dict[str, Any]:
+def collect(base: Path, battery: dict[str, Any] | None = None, at: dt.time | None = None) -> dict[str, Any]:
     cfg = config.merge(config.DEFAULTS, DEMO_CONFIG)
     cfg["calendar"]["ics_urls"] = []  # live calendars stay off in demo mode
-    ctx = data.collect(cfg, base)
+    ctx = data.collect(cfg, base, battery=battery or {"level": 82, "charging": False}, at=at)
     today = ctx["now"].date()
     day = lambda n: today + dt.timedelta(days=n)  # noqa: E731
+    at_ = lambda h, m: ctx["now"].replace(hour=h, minute=m, second=0, microsecond=0)  # noqa: E731
     ctx["calendar"] = {
-        "today": [_ev("Team standup", "10 AM"), _ev("Dentist", "4:30 PM")],
+        "today": [_ev("Team standup", "10 AM", at_(10, 0)), _ev("Design review", "2 PM", at_(14, 0)),
+                  _ev("Dentist", "4:30 PM", at_(16, 30))],
         "upcoming": [
             {"date": day(1), "label": "Tomorrow", "events": [_ev("Mia's birthday")]},
             {"date": day(2), "label": day(2).strftime("%A"), "events": [_ev("Farmers market", "9 AM")]},
@@ -66,4 +68,17 @@ def collect(base: Path) -> dict[str, Any]:
         "table": {"rank": "2", "points": None, "record": "14–6", "group": None},
     }]
     ctx["notes"] = []
+    if ctx["glance"] is not None:
+        ctx["glance"] = data.glance(cfg, ctx["now"], ctx)
+    items = ctx["tasks"]["items"]
+    ctx["due_today"] = [i for i in items if i["when"].startswith(("Overdue", "Today"))]
+    ctx["due_tomorrow"] = ctx["due_today"] + [i for i in items if i["when"] == "Sat"][:1]
+    if ctx["headlines"] is not None:  # keep real news out of screenshots
+        ctx["headlines"] = [
+            {"name": "Tech", "items": [{"title": t, "source": ""} for t in (
+                "A tiny e-ink display runs for a year on one charge", "Show HN: I turned my old tablet into a wall calendar",
+                "The quiet comeback of RSS readers", "Why slow software feels faster")]},
+            {"name": "World", "items": [{"title": t, "source": ""} for t in (
+                "Leaders agree on a new framework for ocean protection", "Record turnout as city opens its first car-free district",
+                "Scientists map the oldest known forest", "Rail link cuts journey time between capitals by half")]}]
     return ctx
