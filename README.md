@@ -46,28 +46,80 @@ More modules are planned; see [Roadmap](#roadmap).
 
 ## What you need
 
-- A **reMarkable 1**. The reMarkable 2 draws its screen differently and isn't supported yet.
+- A **reMarkable 1**. That's the only model tested so far. See [Which reMarkable?](#which-remarkable) for the others.
 - A Mac, Windows or Linux computer that's on for at least part of the day.
 - The tablet on the same Wi-Fi as the computer, or connected by a USB data cable.
-- About 15 minutes.
+- About 15 minutes. No coding needed.
+
+## Which reMarkable?
+
+| Model | Status | Notes |
+|---|---|---|
+| **reMarkable 1** | ✅ Works, tested | Tested on software 3.29 over Wi-Fi and USB, including sleep between refreshes. |
+| **reMarkable 2** | ❌ Not yet | Pairing and SSH work the same way (same password screen). But the rM2's screen isn't driven through the normal framebuffer, so the display program can't draw to it yet. It would need [rm2fb](https://github.com/ddvk/remarkable2-framebuffer)-style support. Help wanted. |
+| **reMarkable Paper Pro / Paper Pro Move** | ❌ Not yet | SSH is only available in *developer mode*, and turning that on **factory-resets the tablet**. It's a different chip (64-bit) with a colour screen and different display hardware. Help wanted. |
+
+`rmdash tablet setup` checks the model and refuses to install on a tablet it can't drive, so trying it is harmless.
+If you have an rM2 or Paper Pro and want to help, [open an issue](../../issues/new/choose).
 
 ## Quick start
 
-### Option A: let a coding agent set it up
+First get the code: click the green **Code** button on GitHub, then **Download ZIP**, and unzip it. If you use git, run
+`git clone https://github.com/OWNER/rmdash.git` instead.
 
-If you use Claude Code, Codex, Cursor, Copilot or a similar agent, clone the repo, open the folder in the agent, and paste:
+### Option A: the setup wizard (recommended)
+
+Open a terminal in the rmdash folder and run the installer. It installs everything it needs, including its own copy
+of Python, then asks you questions one at a time.
+
+```sh
+# macOS / Linux: Terminal → type "cd ", drag the rmdash folder into the window, press Enter, then:
+sh install.sh
+```
+
+```powershell
+# Windows: double-click install.bat, or in PowerShell inside the folder:
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+The wizard walks through:
+
+1. **You**: your name ("Good morning, Alex"), a title for the masthead (e.g. *The Smith Times*), your city and °C/°F
+2. **Screens**: when the morning screen ends, when the night screen starts, and your working hours
+3. **Calendar**: step-by-step instructions for Google, iCloud and Outlook, then paste the link. It checks the link
+   works. Also public holidays for your country.
+4. **To-do lists**: connects TickTick and lets you pick which lists to show
+5. **Sports**: type a team name, pick it from the list
+6. **Headlines**: tech, world, your country's news, any topic or any RSS feed
+7. **Extras**: XKCD, Wikipedia's On this day, quote of the day, air quality
+8. **Preview**: opens a picture of your dashboard
+9. **Tablet**: shows you where to find the tablet's password, pairs it, and puts the dashboard on it
+10. **Automatic refresh**: every 30 minutes while your computer is on
+
+Every question has a default in `[brackets]`. Press Enter to accept it. Anything you skip is listed at the end with
+how to do it later.
+
+**To change something later**, run the wizard again. It remembers your answers and lets you pick just the part to change:
+
+```sh
+uv run rmdash setup
+```
+
+You can also edit `config.toml` in any text editor. Every option is explained in
+[`config.example.toml`](config.example.toml).
+
+### Option B: let a coding agent set it up
+
+If you use Claude Code, Codex, Cursor, Copilot or a similar agent, open the folder in the agent and paste:
 
 > Set up rmdash for me. Read CLAUDE.md first and follow its setup playbook. My city is **___**. Ask me for the
 > tablet's SSH password when you need it, store it only in `.env`, and show me a preview before you touch the tablet.
 
-The agent installs the dependencies and creates your config. It walks you through finding the tablet password, pairs the
-tablet, shows you a preview, and turns on the 30-minute refresh. [`CLAUDE.md`](CLAUDE.md) (also linked from
-[`AGENTS.md`](AGENTS.md)) tells it how the project works and which tablet safety rules it must not break.
+[`CLAUDE.md`](CLAUDE.md) (also linked from [`AGENTS.md`](AGENTS.md)) tells it how the project works and which tablet
+safety rules it must not break. You can keep using the agent to customise things, for example *"add my Google work
+calendar"*, *"follow Arsenal"* or *"make the to-do text smaller"*.
 
-You can keep using the agent to customise things, for example: *"add my Google work calendar"*, *"follow Arsenal"*,
-*"show my TickTick Work and Personal lists"*, *"call it The Smith Times"* or *"make the to-do text smaller"*.
-
-### Option B: by hand
+### Option C: step by step, by hand
 
 **1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/)** (it installs the right Python for you):
 
@@ -78,15 +130,15 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-**2. Get the code and make a config:**
+**2. Install and make a config** (inside the rmdash folder):
 
 ```sh
-git clone https://github.com/OWNER/rmdash.git
-cd rmdash
 uv sync
 uv run rmdash init --city "Lisbon"      # looks up your coordinates and writes config.toml
 uv run rmdash preview                   # opens out/preview.png. The first run downloads a headless browser.
 ```
+
+Then edit `config.toml` using the [module guides](#setting-up-each-module) below.
 
 **3. Put the tablet password in `.env`.** See [Secrets and the `.env` file](#secrets-and-the-env-file) below.
 
@@ -98,8 +150,10 @@ uv run rmdash push                # the dashboard appears on the tablet
 uv run rmdash schedule install    # refresh every 30 min while this computer is on
 ```
 
-That's it. To use the tablet as a notebook again, run `uv run rmdash tablet restore` (or restart the tablet).
-The next scheduled refresh brings the dashboard back. To stop that, run `uv run rmdash schedule remove`.
+### Getting the normal tablet back
+
+Run `uv run rmdash tablet restore`, or just restart the tablet. Your notebooks are never touched. The next scheduled
+refresh brings the dashboard back; to stop that, run `uv run rmdash schedule remove`.
 
 ## Secrets and the `.env` file
 
@@ -302,7 +356,7 @@ Everything you see is [`rmdash/templates/dashboard.html`](rmdash/templates/dashb
 
 | Problem | Fix |
 |---|---|
-| `Cannot reach the tablet` | It may be asleep: commands wait for its next wake-up (on the hour and half hour). Otherwise wake the tablet (press the power button) and check it's on the same Wi-Fi. Check the IP with `rmdash tablet info` over USB, or in the tablet's Wi-Fi settings, and update `RM_HOST`. Many routers let you reserve a fixed IP for it. |
+| `Cannot reach the tablet` | It may be asleep: press its power button (it stays awake 5 minutes), or wait for its next wake-up on the hour or half hour. Otherwise wake the tablet (press the power button) and check it's on the same Wi-Fi. Check the IP with `rmdash tablet info` over USB, or in the tablet's Wi-Fi settings, and update `RM_HOST`. Many routers let you reserve a fixed IP for it. |
 | USB: `10.11.99.1` doesn't respond | Use a cable that carries data (many only charge), plug in directly rather than through a hub, and unlock the tablet. Wi-Fi is usually easier. |
 | Authentication failed | Check the password on the tablet again; software updates can change it. Then run `rmdash tablet setup`. |
 | Dashboard is upside down | Switch `rotate` between `90` and `270`. |
@@ -323,8 +377,10 @@ half hour, stays awake about 3 minutes so your computer can push the new page, t
 the page the whole time. The footer shows the battery level, and a "charge me" screen appears below 10%. You can turn
 sleeping off with `sleep = false` under `[tablet]`. It then stays awake (and reachable) all the time, but lasts hours rather than days.
 
-**The tablet is asleep. How do I reach it?** Any `rmdash` command that needs the tablet waits for its next wake-up
-(at most one refresh interval) and tells you when that is. Restarting the tablet (hold the power button, then turn it on)
+**The tablet is asleep. How do I reach it?** Press its power button. It wakes, and stays awake for 5 minutes so
+your computer can reach it. (Waking it over the network isn't possible: in deep sleep its Wi-Fi is off, which is what
+saves the battery.) Or just wait: any `rmdash` command that needs the tablet waits for its next scheduled wake-up and
+tells you when that is. Restarting the tablet (hold the power button, then turn it on)
 always brings back the normal reMarkable app, because the sleep loop doesn't survive a reboot.
 
 **Do I need to leave the tablet connected to my computer?** No. Over Wi-Fi, the computer only needs to be on and on the
@@ -336,7 +392,11 @@ mods and redoing them after every reMarkable update. That's how projects like
 [trmnl-remarkable](https://github.com/usetrmnl/trmnl-remarkable) work. A "pull" mode, where the tablet fetches the image
 on its own and sleeps in between, is on the roadmap for setups without a computer that's always on.
 
-**reMarkable 2 / Paper Pro?** Not yet. They need a different screen driver. PRs welcome.
+**reMarkable 2 / Paper Pro?** Not yet. See [Which reMarkable?](#which-remarkable). Help is very welcome.
+
+**Does it work on Windows?** Yes. The installer, the wizard, rendering, SSH and the automatic refresh (Task Scheduler)
+all have Windows support, and CI builds and renders on Windows on every change. Day-to-day use has been tested on a Mac
+so far, so Windows bug reports are especially welcome.
 
 ## How it works
 
@@ -359,11 +419,24 @@ your computer (every 30 min)                                         reMarkable 
 
 ## Roadmap
 
-Planned (all free): cricket fixtures, F1, a holiday and birthday countdown, moon phase and UV, currency rates,
-headlines and Hacker News, Wikipedia's "On this day", art or NASA picture of the day dithered for e-ink, a Wi-Fi guest
-QR code, and tablet battery in the footer. There will also be a portrait layout, a **point-and-click setup page** so
-nobody needs a terminal, and a pull mode for tablets away from a computer (the tablet would fetch the page itself). Ideas and PRs are welcome. See
-[CONTRIBUTING.md](CONTRIBUTING.md).
+- reMarkable 2 and Paper Pro support (needs someone with the hardware)
+- More modules, all free: cricket, F1, countdowns and birthdays, moon phase and UV, currency rates,
+  art or NASA picture of the day dithered for e-ink, a Wi-Fi guest QR code. See [docs/module-ideas.md](docs/module-ideas.md).
+- More to-do apps (Todoist, Google Tasks, Microsoft To Do)
+- A portrait layout
+- A point-and-click setup page, for people who'd rather not use a terminal at all
+- Pull mode: the tablet fetches the page itself, for setups away from a computer
+
+## Contributing
+
+Contributions are welcome, from a typo fix to a whole new module.
+
+- **Found a bug?** [Open a bug report](../../issues/new?template=bug_report.md). Screenshots from
+  `rmdash preview --demo` are safe to share; don't paste your `.env` or `config.toml`.
+- **Want a feature or a new module?** [Open a feature request](../../issues/new?template=feature_request.md) or
+  [suggest a module](../../issues/new?template=module_idea.md). Ideas are welcome even if you can't build them.
+- **Have an rM2 or Paper Pro?** Tell us in an issue. Testing on real hardware is the main thing blocking support.
+- **Want to code?** See [CONTRIBUTING.md](CONTRIBUTING.md). You don't need a tablet to work on modules or the design.
 
 ## Credits and license
 

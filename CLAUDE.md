@@ -17,7 +17,9 @@ data.py ─► templates/dashboard.html ─► render.py ─► device.py ──
 
 ## Layout
 
-- `rmdash/cli.py`: entry point (`rmdash init|preview|push|run|tablet|schedule`).
+- `rmdash/cli.py`: entry point (`rmdash setup|init|preview|push|run|tablet|schedule`).
+- `rmdash/wizard.py`: `rmdash setup`, the interactive, re-runnable setup (writes config.toml and .env).
+  `install.sh` / `install.ps1` / `install.bat` install uv and dependencies, then run it.
 - `rmdash/data.py`: gathers all data into one dict. Every source fails soft and adds to `ctx["problems"]`.
 - `rmdash/templates/dashboard.html`: Jinja2 template. **This is the file to edit for design changes.**
 - `rmdash/render.py`: Playwright screenshot, then rotate (landscape) and snap to 16 greys.
@@ -27,6 +29,9 @@ data.py ─► templates/dashboard.html ─► render.py ─► device.py ──
 - `trmnl-remarkable/`: a git-ignored reference clone of usetrmnl/trmnl-remarkable. It is not part of this project.
 
 ## Setup playbook (for agents setting this up for someone)
+
+Humans without an agent use `sh install.sh` / `install.bat` → `rmdash setup` (the wizard). It reads stdin, so don't
+drive it from an agent; follow the steps below instead.
 
 Work through these in order, and tell the user what each step is for. Never print `.env` or calendar links back to them.
 
@@ -98,6 +103,7 @@ With xochitl stopped the rM1 never suspends by itself, so an always-awake tablet
 - The scheduled job (LaunchAgent `StartCalendarInterval` on :00/:30, schtasks `/ST` aligned, cron `*/N`) connects with
   retries until the window ends. During a push it touches `/home/root/rmdash/busy`, which stops the loop sleeping
   (it's ignored once 5 minutes old). `touch /home/root/rmdash/hold` keeps it awake for maintenance.
+  A power-button wake (resumed >30 s before the alarm) keeps it awake 300 s. No remote wake: Wi-Fi is off in suspend.
 - Manual commands (`push`, `tablet …`) wait for the next window via `Tablet.connect_when_awake`.
 - Verified on rM1 3.29: `echo mem > /sys/power/state` with an RTC alarm suspends (deep), resumes on time, Wi-Fi
   reconnects on the same IP within seconds, and the framebuffer is unchanged (md5 before = after).
@@ -109,6 +115,8 @@ With xochitl stopped the rM1 never suspends by itself, so an always-awake tablet
 - Tested on a reMarkable 1 on firmware 3.29.1.0 (kernel 5.4.70). Verified working over Wi-Fi SSH (Nov 2026).
   Stopping xochitl leaves Wi-Fi (wpa_supplicant) up. xochitl is Restart=on-failure, so a clean stop stays stopped.
 - reMarkable 2 uses a different display path (needs rm2fb), so `rmdash-show` won't drive its screen yet.
+  Paper Pro / Move: aarch64, colour panel, SSH only in developer mode (which factory-resets). `device.unsupported()`
+  makes `tablet setup` refuse both before changing anything.
 
 ## Design notes for the template
 

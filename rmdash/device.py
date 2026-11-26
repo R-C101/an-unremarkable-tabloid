@@ -77,6 +77,17 @@ def window(every: int, awake: int, now: float | None = None) -> tuple[bool, floa
     return (True, awake - into) if into < awake else (False, every - into)
 
 
+def unsupported(model: str, arch: str) -> str | None:
+    """Why rmdash can't drive this tablet's screen yet, or None if it can (reMarkable 1)."""
+    if "reMarkable 2" in model:
+        return ("This is a reMarkable 2. Its screen isn't driven through the normal framebuffer, so rmdash "
+                "can't draw on it yet. Nothing was changed. See README 'Which reMarkable?'.")
+    if not arch.startswith("armv7") or ("reMarkable" in model and "reMarkable 1" not in model):
+        return (f"This tablet ({model or 'unknown model'}, {arch}) isn't supported yet; only the reMarkable 1 is. "
+                "Nothing was changed. See README 'Which reMarkable?'.")
+    return None
+
+
 class Tablet:
     def __init__(self, cfg: dict[str, Any], base: Path):
         env = load_env(base)
@@ -138,7 +149,8 @@ class Tablet:
                     inside, secs = window(self.every, self.awake)
                     wait = 0 if inside else secs
                     when = (dt.datetime.now() + dt.timedelta(seconds=wait)).strftime("%H:%M")
-                    say(f"The tablet is asleep. It wakes at {when}; waiting (Ctrl+C to stop)...")
+                    say(f"The tablet is asleep. It wakes by itself at {when}, or press its power button "
+                        "to wake it now (it then stays awake 5 minutes). Waiting... (Ctrl+C to stop)")
                     told = True
                 time.sleep(5)
 
@@ -208,8 +220,9 @@ class Tablet:
 
     def install(self) -> str:
         arch = self.run("uname -m").strip()
-        if not arch.startswith("armv7"):
-            raise TabletError(f"This build supports the reMarkable 1/2 (armv7); tablet reports {arch}")
+        why = unsupported(self.run("cat /sys/devices/soc0/machine 2>/dev/null", check=False).strip(), arch)
+        if why:
+            raise TabletError(why)
         binary = resources.files("rmdash").joinpath("bin/rmdash-show-armv7").read_bytes()
         self.run(f"mkdir -p {shlex.quote(self.remote_dir)}")
         self.put(binary, posixpath.join(self.remote_dir, "rmdash-show"), mode="755")

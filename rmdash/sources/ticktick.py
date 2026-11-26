@@ -111,6 +111,12 @@ def _token(base: Path, env: dict[str, str]) -> str:
     return env["TICKTICK_TOKEN"]
 
 
+def projects(base: Path, env: dict[str, str]) -> list[dict[str, Any]]:
+    """Your open TickTick lists (for choosing which to show)."""
+    hdr = {"Authorization": "Bearer " + _token(base, env)}
+    return [p for p in get_json(f"{API}/project", headers=hdr) if not p.get("closed")]
+
+
 def _due(t: dict[str, Any], tz: ZoneInfo) -> dt.datetime | None:
     d = t.get("dueDate") or t.get("startDate")
     if not d:

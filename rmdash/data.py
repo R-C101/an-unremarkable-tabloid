@@ -62,7 +62,7 @@ def geocode(name: str) -> dict[str, Any]:
     r = res["results"][0]
     label = ", ".join(x for x in (r.get("name"), r.get("admin1"), r.get("country_code")) if x)
     return {"name": label, "latitude": r["latitude"], "longitude": r["longitude"],
-            "timezone": r.get("timezone", "auto")}
+            "timezone": r.get("timezone", "auto"), "country": r.get("country", "")}
 
 
 def describe(code: int | None, is_day: bool = True) -> tuple[str, str]:

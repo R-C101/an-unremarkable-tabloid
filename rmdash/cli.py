@@ -138,6 +138,9 @@ def cmd_tablet(a: argparse.Namespace) -> None:
             elif a.action == "setup":
                 info = t.info()
                 print(f"Found {info.get('model')} ({info.get('arch')}), build {info.get('build')}")
+                why = device.unsupported(info.get("model", ""), info.get("arch", ""))
+                if why:
+                    raise device.TabletError(why)
                 t.install_key()
                 print(f"Installed SSH key {t.key_path} (password no longer needed)")
                 dest = a.dir / "backup" / f"xochitl-{dt.datetime.now():%Y%m%d-%H%M%S}.tar"
@@ -189,6 +192,11 @@ def cmd_schedule(a: argparse.Namespace) -> None:
         print(schedule.status())
 
 
+def cmd_setup(a: argparse.Namespace) -> None:
+    from rmdash import wizard
+    wizard.run(a.dir)
+
+
 def hhmm(v: str) -> dt.time:
     return dt.time.fromisoformat(v if len(v) > 2 else v + ":00")
 
@@ -198,7 +206,10 @@ def main() -> None:
     p.add_argument("--dir", type=Path, default=Path.cwd(), help="project folder (default: current)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    s = sub.add_parser("init", help="create config.toml")
+    sub.add_parser("setup", help="interactive setup: asks one question at a time (run again to change things)"
+                   ).set_defaults(fn=cmd_setup)
+
+    s = sub.add_parser("init", help="create config.toml non-interactively (see also: setup)")
     s.add_argument("--city", help="look up latitude/longitude for this place")
     s.add_argument("--force", action="store_true")
     s.set_defaults(fn=cmd_init)

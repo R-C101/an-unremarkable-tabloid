@@ -13,3 +13,4 @@ backup/
 
 # reference clone of usetrmnl/trmnl-remarkable (not part of this project)
 trmnl-remarkable/
+config.toml.bak

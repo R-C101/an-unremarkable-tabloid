@@ -15,10 +15,14 @@
 #   offset  the computer's UTC offset in seconds, so windows follow local time
 #   busy    a push is in progress: don't sleep (ignored once 5 minutes old)
 #   hold    stay awake until it is removed (maintenance)
+#
+# Pressing the power button wakes it early; it then stays awake for MANUAL
+# seconds so the computer can reach it (e.g. `rmdash push` or `tablet restore`).
 
 DIR=/home/root/rmdash
 EVERY=${1:-1800}
 AWAKE=${2:-180}
+MANUAL=${3:-300}
 RTC=/sys/class/rtc/rtc0/wakealarm
 
 fresh() { [ -e "$1" ] && [ $(( $(date +%s) - $(stat -c %Y "$1") )) -lt 300 ]; }
@@ -37,6 +41,11 @@ while true; do
   echo 0 > "$RTC"
   echo "+$wake" > "$RTC"
   fresh "$DIR/busy" && continue  # a push started just now
+  target=$(( $(date +%s) + wake ))
   echo mem > /sys/power/state || sleep 30   # returns after waking (alarm or power button)
-  sleep 15                      # give Wi-Fi a moment before deciding again
+  if [ $(( target - $(date +%s) )) -gt 30 ]; then
+    sleep "$MANUAL"             # woken early by the power button: stay reachable for a while
+  else
+    sleep 15                    # give Wi-Fi a moment before deciding again
+  fi
 done
