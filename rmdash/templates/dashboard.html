@@ -122,6 +122,30 @@
   footer { display: flex; justify-content: space-between; font-size: 22px; color: var(--soft); font-weight: 500;
            padding-top: 14px; margin-top: 18px; border-top: 5px solid var(--rule); }
   footer .warn { color: #000; font-weight: 700; }
+  /* sports: a slim two-line strip */
+  .match { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 20px;
+           border: 2px solid #000; border-radius: 10px; padding: 10px 20px; margin-bottom: 24px; }
+  .m-main { font-family: "Fraunces"; font-size: 34px; font-weight: 640; line-height: 1.15; }
+  .m-main .vs { font-style: italic; font-weight: 400; font-size: 26px; color: var(--soft); margin: 0 6px; }
+  .m-when { font-size: 22px; font-weight: 560; color: var(--soft); }
+  .m-when b { color: #000; font-weight: 700; }
+  .m-when .soon { display: inline-block; background: #000; color: #fff; border-radius: 5px; padding: 0 8px; margin-left: 8px; font-size: 18px; font-weight: 700; }
+  .m-side { text-align: right; font-size: 21px; color: var(--soft); line-height: 1.45; }
+  .m-side b { color: #000; font-weight: 700; }
+
+  /* tasks: compact, one column per list */
+  .lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 0 36px; }
+  .lists h3 { font-size: 20px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; padding-bottom: 6px;
+              margin-bottom: 4px; border-bottom: 1.5px solid #000; }
+  .task { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: baseline; padding: 3px 0; font-size: 23px; line-height: 1.25; }
+  .task .box { width: 16px; height: 16px; border: 2px solid #000; border-radius: 3px; transform: translateY(1px); }
+  .task.high .box { background: #000; }
+  .task .what { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .task .when { font-size: 18px; font-weight: 600; color: var(--soft); white-space: nowrap; }
+  .task .when.over { color: #000; font-weight: 800; }
+  .more { font-size: 18px; color: var(--soft); padding: 2px 0 0 32px; }
+  .none { font-size: 21px; font-style: italic; color: var(--soft); padding-top: 4px; }
+  .aqi .src { font-size: 20px; color: var(--soft); font-weight: 500; margin-left: 8px; }
 </style>
 </head>
 <body class="{{ orientation }}">
@@ -148,7 +172,7 @@
         </div>
         <div>
           <div class="facts">
-            {% if aqi %}<div class="fact aqi" style="grid-column: 1 / -1"><div class="k">Air quality · {{ aqi.scale }}</div><div class="v"><b>{{ aqi.value }}</b>{{ aqi.label }}</div></div>{% endif %}
+            {% if aqi %}<div class="fact aqi" style="grid-column: 1 / -1"><div class="k">Air quality · {{ aqi.scale }}</div><div class="v"><b>{{ aqi.value }}</b>{{ aqi.label }}{% if aqi.source %}<span class="src">({{ aqi.source }})</span>{% endif %}</div></div>{% endif %}
             <div class="fact"><div class="k">Humidity</div><div class="v">{{ w.humidity }}%</div></div>
             <div class="fact"><div class="k">Wind</div><div class="v">{{ w.wind }} {{ w.wind_unit }}</div></div>
             <div class="fact"><div class="k">Sunrise</div><div class="v">{{ w.today.sunrise }}</div></div>
@@ -172,6 +196,19 @@
     </div>
 
     <div class="agenda">
+      {% for t in sports if t.next %}
+      {% set n = t.next %}
+      <section class="match">
+        <div>
+          <div class="m-main">{{ t.name }}<span class="vs">{{ 'vs' if n.home else 'at' }}</span>{{ n.opponent }}</div>
+          <div class="m-when"><b>{{ n.day }}, {{ n.time }}</b> · {{ n.competition }}{% if n.days_away == 0 %}<span class="soon">TODAY</span>{% elif n.days_away == 1 %}<span class="soon">TOMORROW</span>{% endif %}</div>
+        </div>
+        <div class="m-side">
+          {% if t.table and t.table.rank %}<div><b>#{{ t.table.rank }}</b>{% if t.table.points %} · {{ t.table.points }} pts{% elif t.table.record %} · {{ t.table.record }}{% endif %}</div>{% endif %}
+          {% if t.last %}<div>Last <b>{{ t.last.result }} {{ t.last.score }}</b> {{ 'v' if t.last.home else '@' }} {{ t.last.opponent }}</div>{% endif %}
+        </div>
+      </section>
+      {% endfor %}
       {% if calendar %}
       <section>
         <h2>Today</h2>
@@ -192,6 +229,26 @@
       </section>
       {% endif %}
 
+      {% if tasks %}
+      {% set maxn = cfg.ticktick.max_items %}
+      <section>
+        <h2>To do</h2>
+        <div class="lists">
+        {% for g in tasks.groups %}
+          <div>
+            <h3>{{ g.name }}</h3>
+            {% for t in g["items"][:maxn] %}
+              <div class="task{{ ' high' if t.high }}"><div class="box"></div><div class="what">{{ t.title }}</div><div class="when{{ ' over' if t.when == 'Overdue' }}">{{ t.when }}</div></div>
+            {% else %}
+              <div class="none">All clear</div>
+            {% endfor %}
+            {% if g["items"]|length > maxn %}<div class="more">+ {{ g["items"]|length - maxn }} more</div>{% endif %}
+          </div>
+        {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
       {% if notes %}
       <section>
         <h2>{{ notes_title }}</h2>
@@ -199,7 +256,7 @@
       </section>
       {% endif %}
 
-      {% if not calendar and not notes %}
+      {% if not calendar and not notes and not tasks and not sports %}
       <section>
         <h2>Today</h2>
         <p class="empty">Add a calendar link or a notes.md file to fill this space.</p>

@@ -12,6 +12,8 @@ DEFAULTS: dict[str, Any] = {
     "units": {"temperature": "fahrenheit", "aqi": "us"},
     "air_quality": {"enabled": True},
     "calendar": {"ics_urls": [], "days_ahead": 3},
+    "ticktick": {"enabled": False, "lists": [], "only_due": False, "days_ahead": 2, "max_items": 7},
+    "sports": [],
     "notes": {"file": "notes.md", "title": "Notes"},
     "quotes": {"enabled": True, "file": "quotes.txt"},
     "schedule": {"minutes": 30},

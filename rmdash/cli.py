@@ -114,6 +114,25 @@ def cmd_tablet(a: argparse.Namespace) -> None:
         sys.exit(str(e))
 
 
+def cmd_sports(a: argparse.Namespace) -> None:
+    from rmdash.sources.sports import search
+
+    rows = search(a.query)
+    if not rows:
+        sys.exit("No teams found")
+    for r in rows:
+        print(f'[[sports]]\nname = "{r["name"]}"\nsport = "{r["sport"]}"\n'
+              f'league = "{r["league"]}"\nteam_id = {r["team_id"]}\n')
+    print("Copy the block you want into config.toml.")
+
+
+def cmd_ticktick(a: argparse.Namespace) -> None:
+    from rmdash.sources import ticktick
+
+    ticktick.login(a.dir, device.load_env(a.dir))
+
+
+
 def cmd_schedule(a: argparse.Namespace) -> None:
     if a.action == "install":
         cfg = config.load(a.dir / "config.toml")
@@ -144,6 +163,15 @@ def main() -> None:
     s = sub.add_parser("tablet", help="tablet setup and maintenance")
     s.add_argument("action", choices=["info", "setup", "restore", "backup", "uninstall"])
     s.set_defaults(fn=cmd_tablet)
+
+    s = sub.add_parser("sports", help="find a team to follow")
+    s.add_argument("action", choices=["search"])
+    s.add_argument("query")
+    s.set_defaults(fn=cmd_sports)
+
+    s = sub.add_parser("ticktick", help="connect TickTick (one time)")
+    s.add_argument("action", choices=["login"])
+    s.set_defaults(fn=cmd_ticktick)
 
     s = sub.add_parser("schedule", help="refresh automatically while this computer is on")
     s.add_argument("action", choices=["install", "remove", "status"])

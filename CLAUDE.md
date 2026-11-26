@@ -62,7 +62,6 @@ cd device && go test ./... && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
 
 - reMarkable 1: i.MX6 SoloLite, armv7l, framebuffer `/dev/fb0` is 1404×1872 visible, RGB565
   (line length is usually 1408 px). Refresh uses `MXCFB_SEND_UPDATE` (0x4048462E), GC16 waveform, full update.
-- The user's tablet is a reMarkable 1 on firmware 3.29.1.0 (kernel 5.4.70). Verified working over Wi-Fi SSH (Nov 2026).
   Stopping xochitl leaves Wi-Fi (wpa_supplicant) up. xochitl is Restart=on-failure, so a clean stop stays stopped.
 - reMarkable 2 uses a different display path (needs rm2fb), so `rmdash-show` won't drive its screen yet.
 
@@ -72,3 +71,40 @@ cd device && go test ./... && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
 - Fonts are bundled in `rmdash/fonts` (Fraunces, Inter; OFL), so renders look the same on every OS.
 - Weather icons are inline SVG macros in the template, so nothing is fetched at render time.
 - Check every change with `rmdash preview` before pushing.
+
+## macOS gotcha
+
+If the repo is under ~/Documents, ~/Desktop or ~/Downloads, the LaunchAgent's first run blocks on a TCC
+prompt ("python would like to access files in your Documents folder"). The user must click Allow. A stuck job
+shows `last exit code = (never exited)` in `launchctl print gui/$UID/com.rmdash.refresh`, and `sample <pid>`
+shows it parked in `open()`.
+
+## Data sources (all free)
+
+| Feature | Source | Key? | Status |
+|---|---|---|---|
+| Weather, hourly, 5-day, sunrise/sunset | Open-Meteo forecast | no | built |
+| Air quality (modelled) | Open-Meteo air-quality | no | built (underestimates Delhi) |
+| Air quality (ground station) | WAQI `api.waqi.info/feed/geo:lat;lon` | free token, `WAQI_TOKEN` in .env | built, needs token |
+| Calendar | any iCal/ICS URL (Google secret address, iCloud, Outlook) | no | built |
+| Tasks | TickTick Open API, `rmdash ticktick login` (OAuth, tasks:read) | free dev app | built, needs login |
+| Sports, any ESPN team (soccer, NBA, NFL, MLB, NHL, college) | ESPN public site API, `rmdash sports search` | no | built |
+| Notes / quotes | local `notes.md` / `quotes.txt` | no | built |
+
+## Roadmap (agreed with the user, Nov 2026)
+
+1. **Setup widget for non-technical users (do later, after the feature set settles).** A simple local web page
+   (or the installer UI) that lists every module with a checkbox: weather, AQI, calendar, TickTick, sports
+   team picker, cricket, etc. It writes config.toml and .env, walks through tablet pairing (password →
+   key) and the OAuth logins, and installs the schedule. Target: no terminal needed. Ship for macOS and Windows.
+2. Candidate modules, all free:
+   - Cricket fixtures (India / IPL team): CricAPI free tier (key) or ESPNcricinfo. ESPN's site API doesn't cover cricket schedules.
+   - Holidays and festivals: Google public holiday ICS (e.g. Indian holidays). Already works via `calendar.ics_urls`.
+   - Countdowns and birthdays (local config), moon phase (computed), UV index and rain nowcast (Open-Meteo).
+   - Currency (Frankfurter, no key), crypto (CoinGecko), indices (unofficial Yahoo, fragile).
+   - Headlines via RSS, Hacker News top stories, Wikipedia "On this day" (Wikimedia feed API).
+   - Picture of the day dithered to 16 greys: NASA APOD (DEMO_KEY) or Met Museum public-domain art. XKCD.
+   - F1 next race (jolpica-f1, no key), GitHub contribution graph, Wi-Fi guest QR code (local),
+     tablet battery in the footer.
+3. Cricket and multi-team sports layout, and a portrait layout pass.
+4. Pull mode (tablet fetches the PNG and sleeps with rtcwake) for setups that aren't on a charger.

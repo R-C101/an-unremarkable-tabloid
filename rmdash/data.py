@@ -8,16 +8,13 @@ the whole render.
 from __future__ import annotations
 
 import datetime as dt
-import json
 import random
-import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-USER_AGENT = "rmdash/0.1 (+https://github.com/)"
-TIMEOUT = 15
+from rmdash.http import TIMEOUT, USER_AGENT, get_json
 
 # WMO weather interpretation codes -> (description, icon)
 WMO = {
@@ -55,13 +52,6 @@ US_AQI = [(50, "Good"), (100, "Moderate"), (150, "Unhealthy for sensitive groups
           (200, "Unhealthy"), (300, "Very unhealthy"), (10_000, "Hazardous")]
 EU_AQI = [(20, "Good"), (40, "Fair"), (60, "Moderate"), (80, "Poor"),
           (100, "Very poor"), (10_000, "Extremely poor")]
-
-
-def get_json(url: str, params: dict[str, Any]) -> Any:
-    full = url + "?" + urllib.parse.urlencode(params, doseq=True)
-    req = urllib.request.Request(full, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-        return json.load(r)
 
 
 def geocode(name: str) -> dict[str, Any]:
@@ -141,10 +131,26 @@ def weather(cfg: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def air_quality(cfg: dict[str, Any]) -> dict[str, Any] | None:
+def air_quality(cfg: dict[str, Any], env: dict[str, str] | None = None) -> dict[str, Any] | None:
+    """Ground-station AQI from WAQI when WAQI_TOKEN is set (free key at
+    aqicn.org/data-platform/token), else Open-Meteo's modelled estimate."""
+    loc = cfg["location"]
+    token = (env or {}).get("WAQI_TOKEN")
+    if token:
+        try:
+            d = get_json(f"https://api.waqi.info/feed/geo:{loc['latitude']};{loc['longitude']}/",
+                         {"token": token})
+            if d.get("status") == "ok" and isinstance(d["data"].get("aqi"), (int, float)):
+                value = round(d["data"]["aqi"])
+                label = next(lbl for limit, lbl in US_AQI if value <= limit)
+                station = d["data"].get("city", {}).get("name", "").split(",")[0]
+                pm25 = d["data"].get("iaqi", {}).get("pm25", {}).get("v")
+                return {"value": value, "label": label, "pm25": pm25, "scale": "US AQI",
+                        "source": station or "nearest station"}
+        except Exception:  # noqa: BLE001 - fall back to the model
+            pass
     scale = cfg.get("units", {}).get("aqi", "us")
     field = "us_aqi" if scale == "us" else "european_aqi"
-    loc = cfg["location"]
     data = get_json("https://air-quality-api.open-meteo.com/v1/air-quality", {
         "latitude": loc["latitude"], "longitude": loc["longitude"],
         "current": f"{field},pm2_5", "timezone": "auto"})
@@ -155,7 +161,7 @@ def air_quality(cfg: dict[str, Any]) -> dict[str, Any] | None:
     bands = US_AQI if scale == "us" else EU_AQI
     label = next(lbl for limit, lbl in bands if value <= limit)
     return {"value": value, "label": label, "pm25": data["current"].get("pm2_5"),
-            "scale": "US AQI" if scale == "us" else "EU AQI"}
+            "scale": "US AQI" if scale == "us" else "EU AQI", "source": "model estimate"}
 
 
 def calendar(cfg: dict[str, Any], tz: ZoneInfo, today: dt.date) -> dict[str, Any] | None:
@@ -238,6 +244,11 @@ def day_label(day: dt.date, today: dt.date) -> str:
 
 
 def collect(cfg: dict[str, Any], base: Path) -> dict[str, Any]:
+    from rmdash.device import load_env
+    from rmdash.sources.sports import sports
+    from rmdash.sources.ticktick import tasks
+
+    env = load_env(base)
     ctx: dict[str, Any] = {"cfg": cfg, "problems": []}
     try:
         ctx["weather"] = weather(cfg)
@@ -253,7 +264,7 @@ def collect(cfg: dict[str, Any], base: Path) -> dict[str, Any]:
 
     if cfg.get("air_quality", {}).get("enabled", True):
         try:
-            ctx["aqi"] = air_quality(cfg)
+            ctx["aqi"] = air_quality(cfg, env)
         except Exception:  # noqa: BLE001
             ctx["aqi"] = None
 
@@ -264,6 +275,17 @@ def collect(cfg: dict[str, Any], base: Path) -> dict[str, Any]:
         ctx["problems"].append(f"Calendar unavailable ({type(e).__name__})")
     if ctx["calendar"] and ctx["calendar"]["errors"]:
         ctx["problems"].append("A calendar feed could not be read")
+
+    try:
+        ctx["sports"] = sports(cfg, tz)
+    except Exception as e:  # noqa: BLE001
+        ctx["sports"] = []
+        ctx["problems"].append(f"Sports unavailable ({type(e).__name__})")
+    try:
+        ctx["tasks"] = tasks(cfg, base, env, tz)
+    except Exception as e:  # noqa: BLE001
+        ctx["tasks"] = None
+        ctx["problems"].append(f"TickTick unavailable ({type(e).__name__})")
 
     n = cfg.get("notes", {})
     ctx["notes_title"] = n.get("title", "Notes")

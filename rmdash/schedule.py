@@ -41,7 +41,13 @@ def install(base: Path, minutes: int) -> str:
         uid = os.getuid()
         subprocess.run(["launchctl", "bootout", f"gui/{uid}/{LABEL}"], capture_output=True)
         subprocess.run(["launchctl", "bootstrap", f"gui/{uid}", str(plist)], check=True)
-        return f"Installed LaunchAgent {plist} (every {minutes} min, and at login)"
+        msg = f"Installed LaunchAgent {plist} (every {minutes} min, and at login)"
+        home = Path.home()
+        if any(base.is_relative_to(home / d) for d in ("Documents", "Desktop", "Downloads")):
+            msg += ("\nNOTE: this folder is in a macOS-protected location. The first background run will"
+                    "\nshow a prompt like 'python would like to access files in your Documents folder'."
+                    "\nClick Allow, or the refresh will wait forever.")
+        return msg
     if os.name == "nt":
         tr = subprocess.list2cmdline(cmd)
         subprocess.run(["schtasks", "/Create", "/F", "/TN", WIN_TASK, "/SC", "MINUTE",
