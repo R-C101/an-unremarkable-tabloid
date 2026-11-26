@@ -1,4 +1,7 @@
-# rmdash: turn a reMarkable into an e-ink wall dashboard
+# An Unremarkable Tabloid
+
+**Turn an old reMarkable into an e-ink wall newspaper.**
+
 
 Your old reMarkable becomes a calm, paper-like dashboard. It shows today's weather, air quality, your calendar,
 your to-do lists and your team's next match. Your computer redraws it every 30 minutes. When the computer is off,
@@ -6,7 +9,7 @@ the last page stays on the screen, because e-ink needs no power to hold an image
 
 ![A sample dashboard: weather, air quality, a basketball fixture, calendar and two to-do lists](docs/preview.png)
 
-<sub>Rendered with `rmdash preview --demo` (sample data). On the tablet it's 16 shades of grey at 226 dpi.</sub>
+<sub>Rendered with `tabloid preview --demo` (sample data). On the tablet it's 16 shades of grey at 226 dpi.</sub>
 
 ### It changes through the day
 
@@ -18,8 +21,8 @@ the last page stays on the screen, because e-ink needs no power to hold an image
 The masthead also says "Good afternoon" and "Good evening" for one refresh when each begins, then goes back to your title.
 All times are configurable under `[screens]`.
 
-- **Doesn't change the tablet's system.** It uses the tablet's built-in SSH and puts one small program in `/home/root/rmdash`. No jailbreak, Toltec or system mods.
-- **Reversible in one command.** `rmdash tablet restore`, or just a restart, brings back the normal reMarkable app with your notebooks untouched.
+- **Doesn't change the tablet's system.** It uses the tablet's built-in SSH and puts one small program in `/home/root/tabloid`. No jailbreak, Toltec or system mods.
+- **Reversible in one command.** `tabloid tablet restore`, or just a restart, brings back the normal reMarkable app with your notebooks untouched.
 - **Free.** Every data source is free, and most don't need an account.
 - **Runs on macOS, Windows and Linux.** It needs only Python (installed for you by `uv`). No system `ssh` is needed.
 - **Easy to set up with an AI coding agent.** Point Claude Code, Codex, Cursor or similar at this repo and ask it to set things up ([see below](#option-a-let-a-coding-agent-set-it-up)).
@@ -59,21 +62,21 @@ More modules are planned; see [Roadmap](#roadmap).
 | **reMarkable 2** | ❌ Not yet | Pairing and SSH work the same way (same password screen). But the rM2's screen isn't driven through the normal framebuffer, so the display program can't draw to it yet. It would need [rm2fb](https://github.com/ddvk/remarkable2-framebuffer)-style support. Help wanted. |
 | **reMarkable Paper Pro / Paper Pro Move** | ❌ Not yet | SSH is only available in *developer mode*, and turning that on **factory-resets the tablet**. It's a different chip (64-bit) with a colour screen and different display hardware. Help wanted. |
 
-`rmdash tablet setup` checks the model and refuses to install on a tablet it can't drive, so trying it is harmless.
+`tabloid tablet setup` checks the model and refuses to install on a tablet it can't drive, so trying it is harmless.
 If you have an rM2 or Paper Pro and want to help, [open an issue](../../issues/new/choose).
 
 ## Quick start
 
 First get the code: click the green **Code** button on GitHub, then **Download ZIP**, and unzip it. If you use git, run
-`git clone https://github.com/OWNER/rmdash.git` instead.
+`git clone https://github.com/OWNER/an-unremarkable-tabloid.git` instead.
 
 ### Option A: the setup wizard (recommended)
 
-Open a terminal in the rmdash folder and run the installer. It installs everything it needs, including its own copy
+Open a terminal in the tabloid folder and run the installer. It installs everything it needs, including its own copy
 of Python, then asks you questions one at a time.
 
 ```sh
-# macOS / Linux: Terminal → type "cd ", drag the rmdash folder into the window, press Enter, then:
+# macOS / Linux: Terminal → type "cd ", drag the tabloid folder into the window, press Enter, then:
 sh install.sh
 ```
 
@@ -102,7 +105,7 @@ how to do it later.
 **To change something later**, run the wizard again. It remembers your answers and lets you pick just the part to change:
 
 ```sh
-uv run rmdash setup
+uv run tabloid setup
 ```
 
 You can also edit `config.toml` in any text editor. Every option is explained in
@@ -112,7 +115,7 @@ You can also edit `config.toml` in any text editor. Every option is explained in
 
 If you use Claude Code, Codex, Cursor, Copilot or a similar agent, open the folder in the agent and paste:
 
-> Set up rmdash for me. Read CLAUDE.md first and follow its setup playbook. My city is **___**. Ask me for the
+> Set up tabloid for me. Read CLAUDE.md first and follow its setup playbook. My city is **___**. Ask me for the
 > tablet's SSH password when you need it, store it only in `.env`, and show me a preview before you touch the tablet.
 
 [`CLAUDE.md`](CLAUDE.md) (also linked from [`AGENTS.md`](AGENTS.md)) tells it how the project works and which tablet
@@ -130,12 +133,12 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-**2. Install and make a config** (inside the rmdash folder):
+**2. Install and make a config** (inside the tabloid folder):
 
 ```sh
 uv sync
-uv run rmdash init --city "Lisbon"      # looks up your coordinates and writes config.toml
-uv run rmdash preview                   # opens out/preview.png. The first run downloads a headless browser.
+uv run tabloid init --city "Lisbon"      # looks up your coordinates and writes config.toml
+uv run tabloid preview                   # opens out/preview.png. The first run downloads a headless browser.
 ```
 
 Then edit `config.toml` using the [module guides](#setting-up-each-module) below.
@@ -145,15 +148,15 @@ Then edit `config.toml` using the [module guides](#setting-up-each-module) below
 **4. Pair the tablet and show the dashboard:**
 
 ```sh
-uv run rmdash tablet setup        # installs an SSH key, backs up your notebooks, installs the display program
-uv run rmdash push                # the dashboard appears on the tablet
-uv run rmdash schedule install    # refresh every 30 min while this computer is on
+uv run tabloid tablet setup        # installs an SSH key, backs up your notebooks, installs the display program
+uv run tabloid push                # the dashboard appears on the tablet
+uv run tabloid schedule install    # refresh every 30 min while this computer is on
 ```
 
 ### Getting the normal tablet back
 
-Run `uv run rmdash tablet restore`, or just restart the tablet. Your notebooks are never touched. The next scheduled
-refresh brings the dashboard back; to stop that, run `uv run rmdash schedule remove`.
+Run `uv run tabloid tablet restore`, or just restart the tablet. Your notebooks are never touched. The next scheduled
+refresh brings the dashboard back; to stop that, run `uv run tabloid schedule remove`.
 
 ## Secrets and the `.env` file
 
@@ -178,26 +181,26 @@ WAQI_TOKEN=               # optional
 
 | Variable | What it is | Where to get it |
 |---|---|---|
-| `RM_HOST` | Tablet address | `10.11.99.1` over USB. For Wi-Fi: tablet Settings → Wi-Fi, or `rmdash tablet info` |
+| `RM_HOST` | Tablet address | `10.11.99.1` over USB. For Wi-Fi: tablet Settings → Wi-Fi, or `tabloid tablet info` |
 | `RM_USER` | SSH user | always `root` |
 | `RM_PASSWORD` | Tablet SSH password | Tablet: **Settings → Help → Copyrights and licenses**, bottom of the page |
 | `WAQI_TOKEN` | Ground-station air quality (optional) | [aqicn.org/data-platform/token](https://aqicn.org/data-platform/token/), free and emailed instantly |
 | `TICKTICK_CLIENT_ID` / `_SECRET` | Your TickTick developer app (optional) | See [TickTick](#ticktick) |
-| `TICKTICK_TOKEN` | Written for you by `rmdash ticktick login` | (automatic) |
+| `TICKTICK_TOKEN` | Written for you by `tabloid ticktick login` | (automatic) |
 
 Good habits:
 
-- **Never commit `.env` or paste it into issues or chats.** If you share a screenshot for a bug report, use `rmdash preview --demo`.
-- On macOS and Linux, run `chmod 600 .env` so only your user can read it (`rmdash ticktick login` does this for you).
+- **Never commit `.env` or paste it into issues or chats.** If you share a screenshot for a bug report, use `tabloid preview --demo`.
+- On macOS and Linux, run `chmod 600 .env` so only your user can read it (`tabloid ticktick login` does this for you).
 - You can set any of these as environment variables instead. That's handy for CI or a home server.
-- After `rmdash tablet setup` the tablet trusts an SSH key (`~/.ssh/remarkable_dashboard`), and the password is only a fallback.
+- After `tabloid tablet setup` the tablet trusts an SSH key (`~/.ssh/remarkable_dashboard`), and the password is only a fallback.
   A reMarkable software update can reset the password. If pushes start failing, check the password on the tablet again.
 
 ## Setting up each module
 
 ### Weather and air quality
 
-These work out of the box from `[location]` in `config.toml` (`rmdash init --city` fills it in). Choose units under `[units]`.
+These work out of the box from `[location]` in `config.toml` (`tabloid init --city` fills it in). Choose units under `[units]`.
 The AQI comes from a model. It's usually fine, but it can read low in cities with heavy local pollution. For the
 reading from your nearest real monitoring station, add a free `WAQI_TOKEN` to `.env`. The station's name then
 appears next to the AQI.
@@ -233,7 +236,7 @@ This is a one-time setup, about 3 minutes. It uses TickTick's official API with 
 1. Go to [developer.ticktick.com](https://developer.ticktick.com), sign in, open **Manage Apps** and click **+ App Name** (call it anything).
 2. Edit the app and set **OAuth redirect URL** to exactly `http://127.0.0.1:8765/callback`, then save.
 3. Copy the app's **Client ID** and **Client Secret** into `.env` as `TICKTICK_CLIENT_ID=` and `TICKTICK_CLIENT_SECRET=`.
-4. Run `uv run rmdash ticktick login`. A browser opens: approve, and the token is saved to `.env`.
+4. Run `uv run tabloid ticktick login`. A browser opens: approve, and the token is saved to `.env`.
 5. In `config.toml`, set `enabled = true` and pick lists by their exact names:
 
 ```toml
@@ -252,7 +255,7 @@ Any team on ESPN works: football (soccer), NBA, WNBA, NFL, MLB, NHL, college spo
 paste the block it prints into `config.toml`:
 
 ```sh
-uv run rmdash sports search "barcelona"
+uv run tabloid sports search "barcelona"
 ```
 
 ```toml
@@ -288,19 +291,19 @@ feeds = [
 ]
 ```
 
-Preview any screen without waiting for the clock: `rmdash preview --at 07:30`, `--at 22:30` or `--battery 7`.
+Preview any screen without waiting for the clock: `tabloid preview --at 07:30`, `--at 22:30` or `--battery 7`.
 
 ### Showing it off without showing your life
 
-`rmdash preview --demo` and `rmdash push --demo` use a made-up city, calendar, to-do lists and fixture. Use them for screenshots, photos and bug reports.
+`tabloid preview --demo` and `tabloid push --demo` use a made-up city, calendar, to-do lists and fixture. Use them for screenshots, photos and bug reports.
 Combine them with `--at` and `--battery` to put each screen on the tablet in turn:
 
 ```sh
-uv run rmdash push --demo --at 07:30      # morning
-uv run rmdash push --demo --at 11:00      # day
-uv run rmdash push --demo --at 22:30      # night
-uv run rmdash push --demo --battery 7     # low battery
-uv run rmdash push                        # back to your real dashboard
+uv run tabloid push --demo --at 07:30      # morning
+uv run tabloid push --demo --at 11:00      # day
+uv run tabloid push --demo --at 22:30      # night
+uv run tabloid push --demo --battery 7     # low battery
+uv run tabloid push                        # back to your real dashboard
 ```
 
 The next scheduled refresh also brings your real dashboard back.
@@ -313,20 +316,20 @@ The next scheduled refresh also brings your real dashboard back.
 
 ## Automatic refresh
 
-`rmdash schedule install` uses whatever your computer has built in:
+`tabloid schedule install` uses whatever your computer has built in:
 
 | OS | How | Notes |
 |---|---|---|
-| macOS | LaunchAgent `com.rmdash.refresh` | Runs at login and every N minutes, and catches up after sleep. **If the folder is in Documents, Desktop or Downloads**, macOS asks once whether Python can access that folder. Click **Allow**, or the refresh waits forever. |
-| Windows | Task Scheduler (`rmdash-refresh` and `rmdash-refresh-logon`) | Runs every N minutes and at logon, with no console window. |
+| macOS | LaunchAgent `com.tabloid.refresh` | Runs at login and every N minutes, and catches up after sleep. **If the folder is in Documents, Desktop or Downloads**, macOS asks once whether Python can access that folder. Click **Allow**, or the refresh waits forever. |
+| Windows | Task Scheduler (`tabloid-refresh` and `tabloid-refresh-logon`) | Runs every N minutes and at logon, with no console window. |
 | Linux | Prints a `crontab` line to add | |
 
 Change the interval with `minutes` under `[schedule]`, then run `schedule install` again. If the tablet is asleep, out of
-Wi-Fi range or the computer is off, the run is skipped quietly and the next one catches up. Logs are in `logs/rmdash.log` on macOS and Linux.
+Wi-Fi range or the computer is off, the run is skipped quietly and the next one catches up. Logs are in `logs/tabloid.log` on macOS and Linux.
 
 ## Everyday commands
 
-All commands are `uv run rmdash …`, run from the project folder.
+All commands are `uv run tabloid …`, run from the project folder.
 
 | Command | What it does |
 |---|---|
@@ -338,15 +341,15 @@ All commands are `uv run rmdash …`, run from the project folder.
 | `tablet info` | Model, firmware, battery, Wi-Fi IP |
 | `tablet restore` | Bring the normal reMarkable app back |
 | `tablet backup` | Copy your notebooks to `backup/` |
-| `tablet uninstall` | Remove everything rmdash put on the tablet |
+| `tablet uninstall` | Remove everything tabloid put on the tablet |
 | `sports search "team"` | Find a team to follow |
 | `ticktick login` | Connect TickTick |
 | `schedule install` / `remove` / `status` | Automatic refresh |
 
 ## Changing the design
 
-Everything you see is [`rmdash/templates/dashboard.html`](rmdash/templates/dashboard.html): plain HTML and CSS with
-[Jinja2](https://jinja.palletsprojects.com) tags. Edit it, run `rmdash preview`, and repeat. Some tips for e-ink:
+Everything you see is [`unremarkable/templates/dashboard.html`](unremarkable/templates/dashboard.html): plain HTML and CSS with
+[Jinja2](https://jinja.palletsprojects.com) tags. Edit it, run `tabloid preview`, and repeat. Some tips for e-ink:
 
 - Keep body text pure black, and use greys only for labels and rules. The panel has 16 shades of grey and no colour.
 - Fonts are bundled (Fraunces and Inter), so it renders the same on every computer.
@@ -356,18 +359,18 @@ Everything you see is [`rmdash/templates/dashboard.html`](rmdash/templates/dashb
 
 | Problem | Fix |
 |---|---|
-| `Cannot reach the tablet` | It may be asleep: press its power button (it stays awake 5 minutes), or wait for its next wake-up on the hour or half hour. Otherwise wake the tablet (press the power button) and check it's on the same Wi-Fi. Check the IP with `rmdash tablet info` over USB, or in the tablet's Wi-Fi settings, and update `RM_HOST`. Many routers let you reserve a fixed IP for it. |
+| `Cannot reach the tablet` | It may be asleep: press its power button (it stays awake 5 minutes), or wait for its next wake-up on the hour or half hour. Otherwise wake the tablet (press the power button) and check it's on the same Wi-Fi. Check the IP with `tabloid tablet info` over USB, or in the tablet's Wi-Fi settings, and update `RM_HOST`. Many routers let you reserve a fixed IP for it. |
 | USB: `10.11.99.1` doesn't respond | Use a cable that carries data (many only charge), plug in directly rather than through a hub, and unlock the tablet. Wi-Fi is usually easier. |
-| Authentication failed | Check the password on the tablet again; software updates can change it. Then run `rmdash tablet setup`. |
+| Authentication failed | Check the password on the tablet again; software updates can change it. Then run `tabloid tablet setup`. |
 | Dashboard is upside down | Switch `rotate` between `90` and `270`. |
 | macOS: refreshes stopped | Look for a hidden "would like to access Documents" prompt, or move the folder out of Documents and run `schedule install` again. |
-| A section is missing | The footer lists any source that failed. Run `rmdash preview` in a terminal to see the warnings. |
+| A section is missing | The footer lists any source that failed. Run `tabloid preview` in a terminal to see the warnings. |
 | `TickTick … redirect_uri` error | The redirect URL in your TickTick app must be exactly `http://127.0.0.1:8765/callback`. |
-| I want my notebooks back | Run `rmdash tablet restore`, or restart the tablet. Your notebooks never left. |
+| I want my notebooks back | Run `tabloid tablet restore`, or restart the tablet. Your notebooks never left. |
 
 ## FAQ
 
-**Can it break my tablet?** rmdash writes only inside `/home/root/rmdash` and adds one line to
+**Can it break my tablet?** tabloid writes only inside `/home/root/tabloid` and adds one line to
 `~/.ssh/authorized_keys`. It never touches the system partition, the bootloader or your notebooks, and `tablet setup`
 backs up your notebooks first. Showing the dashboard just stops the reMarkable app until you restore it or restart.
 reMarkable software updates don't affect it, but an update can reset the SSH password.
@@ -379,7 +382,7 @@ sleeping off with `sleep = false` under `[tablet]`. It then stays awake (and rea
 
 **The tablet is asleep. How do I reach it?** Press its power button. It wakes, and stays awake for 5 minutes so
 your computer can reach it. (Waking it over the network isn't possible: in deep sleep its Wi-Fi is off, which is what
-saves the battery.) Or just wait: any `rmdash` command that needs the tablet waits for its next scheduled wake-up and
+saves the battery.) Or just wait: any `tabloid` command that needs the tablet waits for its next scheduled wake-up and
 tells you when that is. Restarting the tablet (hold the power button, then turn it on)
 always brings back the normal reMarkable app, because the sleep loop doesn't survive a reboot.
 
@@ -401,19 +404,19 @@ so far, so Windows bug reports are especially welcome.
 ## How it works
 
 ```
-your computer (every 30 min)                                         reMarkable (/home/root/rmdash)
- data.py ──► dashboard.html ──► headless Chromium ──► 16-grey PNG ──SSH──► rmdash-show ──► e-ink panel
+your computer (every 30 min)                                         reMarkable (/home/root/tabloid)
+ data.py ──► dashboard.html ──► headless Chromium ──► 16-grey PNG ──SSH──► tabloid-show ──► e-ink panel
  weather, AQI, calendar,          (Jinja2)            1404×1872              writes /dev/fb0 and asks for
  tasks, sports, notes                                                         a full refresh
 ```
 
-1. `rmdash/data.py` gathers everything. Each source fails on its own without breaking the page.
+1. `unremarkable/data.py` gathers everything. Each source fails on its own without breaking the page.
 2. The template is rendered and screenshotted by Playwright's headless Chromium at the panel's exact resolution, then
    rotated and snapped to the panel's 16 grey levels.
 3. The PNG is uploaded over SSH ([paramiko](https://www.paramiko.org), so no system `ssh` is needed) and written atomically.
-4. On the tablet, `rmdash-show`, a 1.8 MB static Go program ([source](device/main.go)), stops the reMarkable app so it
+4. On the tablet, `tabloid-show`, a 1.8 MB static Go program ([source](device/main.go)), stops the reMarkable app so it
    doesn't draw over the dashboard. It then writes the image to the framebuffer and triggers a full e-ink refresh.
-5. A small [sleep loop](rmdash/bin/sleep-loop.sh) runs as a temporary systemd unit. It puts the tablet into deep sleep
+5. A small [sleep loop](unremarkable/bin/sleep-loop.sh) runs as a temporary systemd unit. It puts the tablet into deep sleep
    with a wake-up alarm set for the next refresh, so the tablet lasts days instead of hours. The scheduled job on your
    computer runs at the same times (:00, :30), waits for the tablet to come online, and keeps it awake until the push is done.
 
@@ -432,7 +435,7 @@ your computer (every 30 min)                                         reMarkable 
 Contributions are welcome, from a typo fix to a whole new module.
 
 - **Found a bug?** [Open a bug report](../../issues/new?template=bug_report.md). Screenshots from
-  `rmdash preview --demo` are safe to share; don't paste your `.env` or `config.toml`.
+  `tabloid preview --demo` are safe to share; don't paste your `.env` or `config.toml`.
 - **Want a feature or a new module?** [Open a feature request](../../issues/new?template=feature_request.md) or
   [suggest a module](../../issues/new?template=module_idea.md). Ideas are welcome even if you can't build them.
 - **Have an rM2 or Paper Pro?** Tell us in an issue. Testing on real hardware is the main thing blocking support.

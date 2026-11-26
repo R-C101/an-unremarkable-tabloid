@@ -1,4 +1,4 @@
-"""Sample data for `rmdash preview --demo`.
+"""Sample data for `tabloid preview --demo`.
 
 Renders a full dashboard (calendar, tasks, a sports fixture) without any of your
 own accounts, so screenshots for the README or a bug report never leak personal data.
@@ -11,7 +11,7 @@ import datetime as dt
 from pathlib import Path
 from typing import Any
 
-from rmdash import config, data
+from unremarkable import config, data
 
 DEMO_CONFIG = {
     "dashboard": {"title": "The Morning Edition", "name": "Alex"},

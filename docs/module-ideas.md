@@ -1,6 +1,6 @@
 # Module ideas (researched November 2026)
 
-These are candidate modules for rmdash. Each one is **free**, updates **without a human in the loop**, and reads
+These are candidate modules for tabloid. Each one is **free**, updates **without a human in the loop**, and reads
 well on a **16-grey screen that refreshes every ~30 minutes**. Endpoints were checked with `curl` on 26 Nov 2026.
 "Unofficial" means the endpoint is public and stable in practice but undocumented, so it could change.
 

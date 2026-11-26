@@ -1,4 +1,4 @@
-"""`rmdash setup`: an interactive, re-runnable setup wizard.
+"""`tabloid setup`: an interactive, re-runnable setup wizard.
 
 It asks one question at a time, shows an example for each, and writes config.toml
 (settings) and .env (secrets). Run it again any time: your current answers are the
@@ -20,8 +20,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
-from rmdash import config, device
-from rmdash.http import USER_AGENT
+from unremarkable import config, device
+from unremarkable.http import USER_AGENT
 
 HOLIDAYS = {  # Google's public holiday calendars (verified Nov 2026)
     "india": "indian", "usa": "usa", "us": "usa", "united states": "usa", "uk": "uk", "united kingdom": "uk",
@@ -164,14 +164,14 @@ def _val(v: Any) -> str:
 
 
 def dumps(cfg: dict[str, Any]) -> str:
-    out = ["# Written by `rmdash setup`. Run it again to change things, or edit this file by hand:",
+    out = ["# Written by `tabloid setup`. Run it again to change things, or edit this file by hand:",
            "# every option is explained in config.example.toml. This file is private (git-ignored).", ""]
     keys = [k for k in ORDER if k in cfg] + [k for k in cfg if k not in ORDER]
     for k in keys:
         v = cfg[k]
         if isinstance(v, list) and all(isinstance(x, dict) for x in v):  # [[sports]]
             if k == "sports":
-                out.append("# Teams: find more with `rmdash sports search \"name\"`")
+                out.append("# Teams: find more with `tabloid sports search \"name\"`")
             for item in v:
                 out.append(f"[[{k}]]")
                 out += [f"{kk} = {_val(vv)}" for kk, vv in item.items() if vv is not None]
@@ -210,7 +210,7 @@ class Setup:
         return device.load_env(self.base)
 
     def set_env(self, **values: str) -> None:
-        from rmdash.sources.ticktick import set_env
+        from unremarkable.sources.ticktick import set_env
         set_env(self.base, values)
 
     def save(self) -> None:
@@ -228,7 +228,7 @@ class Setup:
                     f"The {name or 'Smith'} Times, Daily Planet, The Morning Edition") or "The Morning Edition"
         self.set("dashboard", name=name, title=title)
 
-        from rmdash.data import geocode
+        from unremarkable.data import geocode
         loc = self.cfg.get("location", {})
         while True:
             city = ask("Your city, for weather and air quality", loc.get("name", ""), "Lisbon, or Springfield, US")
@@ -298,7 +298,7 @@ class Setup:
                 private.append(u)
                 say(good(f"✓ Added ({info})") if ok else "Added.")
         if not private:
-            self.todo.append("Add your calendar: run `rmdash setup` again and choose Calendar "
+            self.todo.append("Add your calendar: run `tabloid setup` again and choose Calendar "
                              "(it shows where to find the link for Google, iCloud and Outlook).")
         names = sorted({k for k, v in HOLIDAYS.items() if any(f"en.{v}%23" in u for u in holiday)}, key=len)
         country = ask("Public holidays for which country? (Enter to skip, '-' for none)",
@@ -322,26 +322,26 @@ class Setup:
         env = self.env()
         if not (env.get("TICKTICK_CLIENT_ID") and env.get("TICKTICK_CLIENT_SECRET")) or \
                 yes("Re-enter your TickTick app's Client ID and Secret?", False):
-            say("TickTick needs a free \"developer app\" so rmdash can read (never change) your tasks:\n"
-                "  1. Go to https://developer.ticktick.com and sign in → Manage Apps → + App Name (call it rmdash)\n"
+            say("TickTick needs a free \"developer app\" so tabloid can read (never change) your tasks:\n"
+                "  1. Go to https://developer.ticktick.com and sign in → Manage Apps → + App Name (call it tabloid)\n"
                 "  2. Edit the app. Set OAuth redirect URL to:  http://127.0.0.1:8765/callback  and save\n"
                 "  3. Copy its Client ID and Client Secret here")
             cid = ask("Client ID")
             csec = secret("Client Secret", False)
             if not cid or not csec:
                 say(warn("Skipped. Run setup again when you have them."))
-                self.todo.append("Connect TickTick: run `rmdash setup` again and choose To-do lists.")
+                self.todo.append("Connect TickTick: run `tabloid setup` again and choose To-do lists.")
                 return
             self.set_env(TICKTICK_CLIENT_ID=cid, TICKTICK_CLIENT_SECRET=csec)
             env = self.env()
-        from rmdash.sources import ticktick
+        from unremarkable.sources import ticktick
         if not env.get("TICKTICK_TOKEN") or yes("Log in to TickTick again?", False):
             say("A browser window opens: approve read-only access, then come back here.")
             try:
                 ticktick.login(self.base, env)
             except (SystemExit, Exception) as e:  # noqa: BLE001
                 say(warn(f"TickTick login didn't finish: {e}"))
-                self.todo.append("Connect TickTick: run `rmdash ticktick login`.")
+                self.todo.append("Connect TickTick: run `tabloid ticktick login`.")
                 self.set("ticktick", enabled=True)
                 return
             env = self.env()
@@ -365,7 +365,7 @@ class Setup:
         say("Follow any team ESPN covers: football/soccer, NBA, NFL, MLB, NHL, college sports.\n"
             "It shows the next game, the last result and the league position.")
         teams = [t for t in self.cfg.get("sports", []) if yes(f"Keep following {bold(t.get('name', '?'))}?")]
-        from rmdash.sources.sports import search
+        from unremarkable.sources.sports import search
         while True:
             q = ask("Team to follow (Enter when done)", example="Arsenal, Lakers, Real Madrid" if not teams else "")
             if not q:
@@ -459,10 +459,10 @@ class Setup:
                 self.set_env(WAQI_TOKEN=tok)
 
     def tablet(self) -> None:
-        from rmdash import cli
+        from unremarkable import cli
         heading("Connect the tablet")
         env = self.env()
-        say("rmdash talks to the tablet over SSH, the reMarkable's built-in remote login.\n"
+        say("tabloid talks to the tablet over SSH, the reMarkable's built-in remote login.\n"
             f"On the tablet, open {bold('Settings → Help → Copyrights and licenses')} and scroll to the bottom.\n"
             "You'll see the SSH password and the tablet's IP addresses.")
         cur = env.get("RM_HOST") or self.get("tablet", "host", "10.11.99.1")
@@ -481,10 +481,10 @@ class Setup:
                                      "it can take up to 30 min to answer commands)", self.get("tablet", "sleep", True)))
         self.save()
         say("\nPairing installs a key so the password isn't needed again, backs up your notebooks to the\n"
-            "backup folder, and copies a small display program into /home/root/rmdash. Nothing else changes;\n"
+            "backup folder, and copies a small display program into /home/root/tabloid. Nothing else changes;\n"
             "restarting the tablet always brings back the normal reMarkable app.")
         if not yes("Pair the tablet now?"):
-            self.todo.append("Pair the tablet: `rmdash tablet setup`, then `rmdash push`.")
+            self.todo.append("Pair the tablet: `tabloid tablet setup`, then `tabloid push`.")
             return
         ns = argparse.Namespace(dir=self.base, action="setup")
         try:
@@ -492,7 +492,7 @@ class Setup:
         except SystemExit as e:
             say(warn(f"Pairing failed: {e}\nCheck the IP and password, that the tablet is awake and on the same "
                      "Wi-Fi, then run setup again."))
-            self.todo.append("Pair the tablet: run `rmdash setup` again and choose Tablet.")
+            self.todo.append("Pair the tablet: run `tabloid setup` again and choose Tablet.")
             return
         if yes("Show the dashboard on the tablet now?"):
             try:
@@ -501,7 +501,7 @@ class Setup:
                 say(warn(f"Push failed: {e}"))
 
     def refresh(self) -> None:
-        from rmdash import schedule
+        from unremarkable import schedule
         heading("Automatic refresh")
         mins = self.get("schedule", "minutes", 30)
         opts = [15, 20, 30, 60]
@@ -517,10 +517,10 @@ class Setup:
         if yes("Turn on automatic refresh?"):
             say(schedule.install(self.base, opts[i]))
         else:
-            self.todo.append("Turn on automatic refresh: `rmdash schedule install`.")
+            self.todo.append("Turn on automatic refresh: `tabloid schedule install`.")
 
     def preview(self) -> None:
-        from rmdash import cli
+        from unremarkable import cli
         heading("Preview")
         say("Rendering your dashboard (the first time downloads a small headless browser, about a minute)...")
         try:
@@ -529,7 +529,7 @@ class Setup:
             say(warn(f"Preview failed: {e}"))
             return
         say("It opened out/preview.png. Morning or night instead? Try "
-            + bold("rmdash preview --at 07:30") + " or " + bold("--at 22:30") + ".")
+            + bold("tabloid preview --at 07:30") + " or " + bold("--at 22:30") + ".")
 
 
 SECTIONS: list[tuple[str, Callable[[Setup], None]]] = [
@@ -561,7 +561,7 @@ def run(base: Path) -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")  # type: ignore[union-attr]
     s = Setup(base)
-    say(bold("\nrmdash setup") + " turns your reMarkable into a wall dashboard.\n"
+    say(bold("\nAn Unremarkable Tabloid") + ": your reMarkable as an e-ink wall newspaper.\n"
         + dim("Press Enter to accept the value in [brackets]. Ctrl+C stops at any time; "
               "finished sections are already saved."))
     try:
@@ -596,7 +596,7 @@ def run(base: Path) -> None:
     heading("Done")
     for t in s.todo:
         say(f"  • {t}")
-    say("Change anything later with " + bold("rmdash setup") + ". Everyday commands:\n"
-        "  rmdash preview          see the dashboard on this computer\n"
-        "  rmdash push             update the tablet now\n"
-        "  rmdash tablet restore   get the normal reMarkable app back (or restart the tablet)")
+    say("Change anything later with " + bold("tabloid setup") + ". Everyday commands:\n"
+        "  tabloid preview          see the dashboard on this computer\n"
+        "  tabloid push             update the tablet now\n"
+        "  tabloid tablet restore   get the normal reMarkable app back (or restart the tablet)")

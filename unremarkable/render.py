@@ -19,7 +19,7 @@ def html(ctx: dict[str, Any]) -> tuple[str, int, int]:
     cfg = ctx["cfg"]
     landscape = cfg["dashboard"]["orientation"] == "landscape"
     w, h = (PANEL_H, PANEL_W) if landscape else (PANEL_W, PANEL_H)
-    pkg = resources.files("rmdash")
+    pkg = resources.files("unremarkable")
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(pkg / "templates")),
                              autoescape=jinja2.select_autoescape(["html"]))
     tpl = env.get_template(cfg["dashboard"].get("template", "dashboard.html"))

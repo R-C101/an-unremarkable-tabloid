@@ -1,3 +1,3 @@
-module rmdash-show
+module tabloid-show
 
 go 1.22

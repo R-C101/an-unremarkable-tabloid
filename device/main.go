@@ -1,4 +1,4 @@
-// rmdash-show draws a PNG on the reMarkable 1 e-ink screen.
+// tabloid-show draws a PNG on the reMarkable 1 e-ink screen.
 //
 // It writes the image into the Linux framebuffer (/dev/fb0) and then asks the
 // i.MX EPDC driver for a full-screen GC16 (16-grey) refresh. It changes
@@ -7,8 +7,8 @@
 //
 // Usage:
 //
-//	rmdash-show [-fb /dev/fb0] image.png
-//	rmdash-show -info
+//	tabloid-show [-fb /dev/fb0] image.png
+//	tabloid-show -info
 package main
 
 import (
@@ -153,7 +153,7 @@ func main() {
 		return
 	}
 	if flag.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: rmdash-show [-fb /dev/fb0] image.png | -info")
+		fmt.Fprintln(os.Stderr, "usage: tabloid-show [-fb /dev/fb0] image.png | -info")
 		os.Exit(2)
 	}
 	switch s.bpp {
@@ -207,6 +207,6 @@ func toGray(img image.Image) *image.Gray {
 }
 
 func fail(err error) {
-	fmt.Fprintln(os.Stderr, "rmdash-show:", err)
+	fmt.Fprintln(os.Stderr, "tabloid-show:", err)
 	os.Exit(1)
 }

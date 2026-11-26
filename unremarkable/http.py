@@ -7,7 +7,7 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
-USER_AGENT = "rmdash/0.1"
+USER_AGENT = "unremarkable-tabloid/0.1"
 TIMEOUT = 15
 
 

@@ -12,9 +12,9 @@ jobs:
       - run: uv sync
       - if: runner.os == 'Linux'
         run: uv run playwright install --with-deps chromium
-      - run: uv run python -m compileall -q rmdash
-      - run: uv run rmdash --help
-      - run: uv run rmdash preview --demo --no-open
+      - run: uv run python -m compileall -q unremarkable
+      - run: uv run tabloid --help
+      - run: uv run tabloid preview --demo --no-open
   go:
     runs-on: ubuntu-latest
     steps:

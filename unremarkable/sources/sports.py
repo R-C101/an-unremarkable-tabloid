@@ -1,6 +1,6 @@
 """Sports: next game, last result and standing for any team ESPN covers
 (soccer, NBA, NFL, MLB, NHL, college, ...). Uses ESPN's public site API, which
-needs no key. Find a team with `rmdash sports search "name"`.
+needs no key. Find a team with `tabloid sports search "name"`.
 
 Config (one block per team):
 
@@ -17,8 +17,8 @@ import datetime as dt
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from rmdash.data import fmt_time
-from rmdash.http import get_json
+from unremarkable.data import fmt_time
+from unremarkable.http import get_json
 
 SITE = "https://site.api.espn.com/apis/site/v2/sports"
 NICE = {

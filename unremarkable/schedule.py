@@ -1,4 +1,4 @@
-"""Runs `rmdash run` every N minutes while the computer is on.
+"""Runs `tabloid run` every N minutes while the computer is on.
 
 macOS: a LaunchAgent (runs at login and every N minutes; missed runs while the
 Mac sleeps happen on wake). Windows: two Task Scheduler tasks (every N minutes,
@@ -14,8 +14,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-LABEL = "com.rmdash.refresh"
-WIN_TASK = "rmdash-refresh"
+LABEL = "com.tabloid.refresh"
+WIN_TASK = "tabloid-refresh"
 
 
 def command(base: Path) -> list[str]:
@@ -23,7 +23,7 @@ def command(base: Path) -> list[str]:
     if os.name == "nt":  # pythonw avoids a console window flashing every 30 min
         w = Path(py).with_name("pythonw.exe")
         py = str(w) if w.exists() else py
-    return [py, "-m", "rmdash", "--dir", str(base), "run"]
+    return [py, "-m", "unremarkable", "--dir", str(base), "run"]
 
 
 def install(base: Path, minutes: int) -> str:
@@ -39,7 +39,7 @@ def install(base: Path, minutes: int) -> str:
             **({"StartCalendarInterval": [{"Minute": m} for m in range(0, 60, minutes)]}
                if minutes < 60 and 60 % minutes == 0 else {"StartInterval": minutes * 60}),
             "RunAtLoad": True,
-            "StandardOutPath": str(logs / "rmdash.log"), "StandardErrorPath": str(logs / "rmdash.log"),
+            "StandardOutPath": str(logs / "tabloid.log"), "StandardErrorPath": str(logs / "tabloid.log"),
         }))
         uid = os.getuid()
         subprocess.run(["launchctl", "bootout", f"gui/{uid}/{LABEL}"], capture_output=True)
@@ -61,7 +61,7 @@ def install(base: Path, minutes: int) -> str:
         subprocess.run(["schtasks", "/Create", "/F", "/TN", WIN_TASK + "-logon", "/SC", "ONLOGON",
                         "/TR", tr], check=True)
         return f"Created scheduled tasks {WIN_TASK} (every {minutes} min) and {WIN_TASK}-logon"
-    line = f"*/{minutes} * * * * cd {base} && {subprocess.list2cmdline(cmd)} >> {base}/logs/rmdash.log 2>&1"
+    line = f"*/{minutes} * * * * cd {base} && {subprocess.list2cmdline(cmd)} >> {base}/logs/tabloid.log 2>&1"
     return "Add this line with `crontab -e` (plus an @reboot line if you like):\n" + line
 
 
@@ -75,7 +75,7 @@ def remove() -> str:
         for t in (WIN_TASK, WIN_TASK + "-logon"):
             subprocess.run(["schtasks", "/Delete", "/F", "/TN", t], capture_output=True)
         return "Removed the scheduled tasks"
-    return "Remove the rmdash line with `crontab -e`"
+    return "Remove the tabloid line with `crontab -e`"
 
 
 def status() -> str:

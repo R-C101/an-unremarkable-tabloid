@@ -6,7 +6,7 @@ One-time setup:
   3. Put the Client ID and Client Secret in .env as
         TICKTICK_CLIENT_ID=...
         TICKTICK_CLIENT_SECRET=...
-  4. Run `rmdash ticktick login`, approve in the browser. The token is saved to .env.
+  4. Run `tabloid ticktick login`, approve in the browser. The token is saved to .env.
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from rmdash.data import fmt_time
-from rmdash.http import get_json, post_form
+from unremarkable.data import fmt_time
+from unremarkable.http import get_json, post_form
 
 AUTH_URL = "https://ticktick.com/oauth/authorize"
 TOKEN_URL = "https://ticktick.com/oauth/token"
@@ -60,7 +60,7 @@ def _save_token(base: Path, tok: dict[str, Any]) -> None:
 def login(base: Path, env: dict[str, str]) -> None:
     if not env.get("TICKTICK_CLIENT_ID") or not env.get("TICKTICK_CLIENT_SECRET"):
         raise SystemExit("Add TICKTICK_CLIENT_ID and TICKTICK_CLIENT_SECRET to .env first "
-                         "(see rmdash/sources/ticktick.py for the steps).")
+                         "(see unremarkable/sources/ticktick.py for the steps).")
     state = secrets.token_urlsafe(16)
     got: dict[str, str] = {}
 

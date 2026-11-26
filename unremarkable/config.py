@@ -26,7 +26,7 @@ DEFAULTS: dict[str, Any] = {
     "notes": {"file": "notes.md", "title": "Notes"},
     "quotes": {"enabled": True, "file": "quotes.txt"},
     "schedule": {"minutes": 30},
-    "tablet": {"host": "10.11.99.1", "user": "root", "remote_dir": "/home/root/rmdash",
+    "tablet": {"host": "10.11.99.1", "user": "root", "remote_dir": "/home/root/tabloid",
                "sleep": True, "awake_seconds": 180},
 }
 
@@ -40,8 +40,8 @@ def merge(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
 
 def load(path: Path) -> dict[str, Any]:
     if not path.exists():
-        raise SystemExit(f"No config at {path}. Run: rmdash init --city \"Your City\"")
+        raise SystemExit(f"No config at {path}. Run: tabloid init --city \"Your City\"")
     cfg = merge(DEFAULTS, tomllib.loads(path.read_text("utf-8")))
     if cfg["location"]["latitude"] is None:
-        raise SystemExit("Set [location] latitude/longitude in config.toml (or run rmdash init --city ...)")
+        raise SystemExit("Set [location] latitude/longitude in config.toml (or run tabloid init --city ...)")
     return cfg

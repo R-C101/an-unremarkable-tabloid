@@ -4,7 +4,7 @@ about: Suggest an improvement or something new
 labels: enhancement
 ---
 
-**What would you like rmdash to do?**
+**What would you like tabloid to do?**
 
 **Why would it be useful to you?**
 

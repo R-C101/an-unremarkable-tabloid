@@ -2,7 +2,7 @@
 Windows and Linux without relying on a system ssh/scp/sftp).
 
 Safety rules this module follows:
-  * Everything we add lives in one folder (default /home/root/rmdash).
+  * Everything we add lives in one folder (default /home/root/tabloid).
   * The only system change is stopping xochitl (the normal reMarkable UI) while
     the dashboard is shown. `restore` starts it again, and so does a reboot.
 """
@@ -36,12 +36,12 @@ def make_key(path: Path) -> None:
 
     path.parent.mkdir(parents=True, exist_ok=True)
     if shutil.which("ssh-keygen"):
-        subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "rmdash",
+        subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "tabloid",
                         "-f", str(path)], check=True)
         return
     key = paramiko.RSAKey.generate(3072)
     key.write_private_key_file(str(path))
-    Path(str(path) + ".pub").write_text(f"{key.get_name()} {key.get_base64()} rmdash\n")
+    Path(str(path) + ".pub").write_text(f"{key.get_name()} {key.get_base64()} tabloid\n")
 
 
 def load_env(base: Path) -> dict[str, str]:
@@ -62,7 +62,7 @@ def load_env(base: Path) -> dict[str, str]:
     return env
 
 
-SLEEP_UNIT = "rmdash-sleep"
+SLEEP_UNIT = "tabloid-sleep"
 
 
 def local_offset() -> int:
@@ -78,9 +78,9 @@ def window(every: int, awake: int, now: float | None = None) -> tuple[bool, floa
 
 
 def unsupported(model: str, arch: str) -> str | None:
-    """Why rmdash can't drive this tablet's screen yet, or None if it can (reMarkable 1)."""
+    """Why tabloid can't drive this tablet's screen yet, or None if it can (reMarkable 1)."""
     if "reMarkable 2" in model:
-        return ("This is a reMarkable 2. Its screen isn't driven through the normal framebuffer, so rmdash "
+        return ("This is a reMarkable 2. Its screen isn't driven through the normal framebuffer, so tabloid "
                 "can't draw on it yet. Nothing was changed. See README 'Which reMarkable?'.")
     if not arch.startswith("armv7") or ("reMarkable" in model and "reMarkable 1" not in model):
         return (f"This tablet ({model or 'unknown model'}, {arch}) isn't supported yet; only the reMarkable 1 is. "
@@ -99,7 +99,7 @@ class Tablet:
         self.user = env.get("RM_USER") or t.get("user", "root")
         self.password = env.get("RM_PASSWORD")
         self.key_path = Path(os.path.expanduser(t.get("key", str(DEFAULT_KEY))))
-        self.remote_dir = t.get("remote_dir", "/home/root/rmdash")
+        self.remote_dir = t.get("remote_dir", "/home/root/tabloid")
         self.client: paramiko.SSHClient | None = None
 
     # -- connection -------------------------------------------------------
@@ -195,7 +195,7 @@ class Tablet:
             "echo battery=$(cat $d/capacity)% && echo charging=$(cat $d/status) && break; done;"
             "echo wifi_ip=$(ip -4 -o addr show wlan0 2>/dev/null | awk '{print $4}');"
             "echo free_home=$(df -h /home | awk 'NR==2{print $4}');"
-            f"echo installed=$(test -x {self.remote_dir}/rmdash-show && echo yes || echo no);"
+            f"echo installed=$(test -x {self.remote_dir}/tabloid-show && echo yes || echo no);"
             f"echo sleep_loop=$(systemctl is-active {SLEEP_UNIT})"
         )
         out = self.run(script, check=False)
@@ -223,10 +223,10 @@ class Tablet:
         why = unsupported(self.run("cat /sys/devices/soc0/machine 2>/dev/null", check=False).strip(), arch)
         if why:
             raise TabletError(why)
-        binary = resources.files("rmdash").joinpath("bin/rmdash-show-armv7").read_bytes()
+        binary = resources.files("unremarkable").joinpath("bin/tabloid-show-armv7").read_bytes()
         self.run(f"mkdir -p {shlex.quote(self.remote_dir)}")
-        self.put(binary, posixpath.join(self.remote_dir, "rmdash-show"), mode="755")
-        return self.run(f"{shlex.quote(self.remote_dir)}/rmdash-show -info").strip()
+        self.put(binary, posixpath.join(self.remote_dir, "tabloid-show"), mode="755")
+        return self.run(f"{shlex.quote(self.remote_dir)}/tabloid-show -info").strip()
 
     def busy(self, on: bool) -> None:
         """While a push is in progress the sleep loop stays awake."""
@@ -235,13 +235,13 @@ class Tablet:
 
     def show(self, png: bytes) -> str:
         d = shlex.quote(self.remote_dir)
-        if self.run(f"test -x {d}/rmdash-show && echo yes", check=False).strip() != "yes":
+        if self.run(f"test -x {d}/tabloid-show && echo yes", check=False).strip() != "yes":
             self.install()
         self.put(png, posixpath.join(self.remote_dir, "dashboard.png"))
         # Stop the normal UI so it doesn't paint over the dashboard, then draw.
         out = self.run(
             "if systemctl is-active --quiet xochitl; then systemctl stop xochitl; sleep 2; fi; "
-            f"{d}/rmdash-show {d}/dashboard.png"
+            f"{d}/tabloid-show {d}/dashboard.png"
         ).strip()
         if self.sleep:
             self.start_sleeping()
@@ -251,7 +251,7 @@ class Tablet:
 
     def start_sleeping(self) -> None:
         """(Re)start the sleep loop as a transient unit: it disappears on reboot."""
-        script = resources.files("rmdash").joinpath("bin/sleep-loop.sh").read_bytes()
+        script = resources.files("unremarkable").joinpath("bin/sleep-loop.sh").read_bytes()
         path = posixpath.join(self.remote_dir, "sleep-loop.sh")
         self.put(str(local_offset()).encode(), posixpath.join(self.remote_dir, "offset"))
         current = self.run(f"cat {shlex.quote(path)} 2>/dev/null", check=False).encode()

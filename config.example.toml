@@ -1,4 +1,4 @@
-# Copy to config.toml (or run `rmdash init --city "Your City"`) and edit.
+# Copy to config.toml (or run `tabloid init --city "Your City"`) and edit.
 # config.toml is git-ignored, because calendar links in it are private.
 # Secrets (tablet password, API tokens) go in .env instead. See .env.example.
 
@@ -44,14 +44,14 @@ ics_urls = []
 days_ahead = 3
 
 [ticktick]
-enabled = false             # true, then run `rmdash ticktick login` (see .env.example)
+enabled = false             # true, then run `tabloid ticktick login` (see .env.example)
 lists = []                  # e.g. ["Work", "Personal"]; each list gets a column. Empty = all lists.
 only_due = false            # true = only tasks due within days_ahead
 days_ahead = 2
 max_items = 7               # per list (the layout trims more if space runs out)
 
 # Sports: any team ESPN covers (football/soccer, NBA, NFL, MLB, NHL, college...).
-# Find yours with:  rmdash sports search "arsenal"   and paste the block it prints.
+# Find yours with:  tabloid sports search "arsenal"   and paste the block it prints.
 # [[sports]]
 # name = "Arsenal"
 # sport = "soccer"
@@ -87,9 +87,9 @@ file = "quotes.txt"         # "quote | author" per line; one is picked per day
 minutes = 30
 
 [tablet]
-host = "10.11.99.1"         # USB. For Wi-Fi use the tablet's IP (see `rmdash tablet info`). RM_HOST in .env wins.
+host = "10.11.99.1"         # USB. For Wi-Fi use the tablet's IP (see `tabloid tablet info`). RM_HOST in .env wins.
 user = "root"
-remote_dir = "/home/root/rmdash"
+remote_dir = "/home/root/tabloid"
 sleep = true                # deep-sleep between refreshes (days of battery instead of hours)
 awake_seconds = 180         # how long it stays awake after each :00/:30 for the computer to push
 # key = "~/.ssh/remarkable_dashboard"

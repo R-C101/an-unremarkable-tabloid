@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from rmdash.http import TIMEOUT, USER_AGENT, get_json
+from unremarkable.http import TIMEOUT, USER_AGENT, get_json
 
 # WMO weather interpretation codes -> (description, icon)
 WMO = {
@@ -285,11 +285,11 @@ def collect(cfg: dict[str, Any], base: Path, battery: dict[str, Any] | None = No
             at: dt.time | None = None) -> dict[str, Any]:
     """Gather everything for one render. `battery` comes from the tablet; `at`
     pretends it's that time of day (for previewing the timed screens)."""
-    from rmdash import screens
-    from rmdash.device import load_env
-    from rmdash.sources import extras
-    from rmdash.sources.sports import sports
-    from rmdash.sources.ticktick import tasks
+    from unremarkable import screens
+    from unremarkable.device import load_env
+    from unremarkable.sources import extras
+    from unremarkable.sources.sports import sports
+    from unremarkable.sources.ticktick import tasks
 
     env = load_env(base)
     ctx: dict[str, Any] = {"cfg": cfg, "problems": []}

@@ -1,4 +1,4 @@
-"""Command line: `rmdash <command>`. Run `rmdash -h` for the list."""
+"""Command line: `tabloid <command>`. Run `tabloid -h` for the list."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from rmdash import config, data, device, render, schedule
+from unremarkable import config, data, device, render, schedule
 
 
 def log(msg: str) -> None:
@@ -52,13 +52,13 @@ def cmd_init(a: argparse.Namespace) -> None:
     cfg_path.write_text(text, "utf-8")
     if not (base / "notes.md").exists() and (base / "notes.example.md").exists():
         shutil.copy(base / "notes.example.md", base / "notes.md")
-    print(f"Wrote {cfg_path}. Next: rmdash preview")
+    print(f"Wrote {cfg_path}. Next: tabloid preview")
 
 
 def cmd_preview(a: argparse.Namespace) -> None:
     battery = {"level": a.battery, "charging": False} if a.battery is not None else None
     if a.demo:  # sample data and a made-up battery level, so screenshots are safe to share
-        from rmdash import demo
+        from unremarkable import demo
         panel, preview = render.render(demo.collect(a.dir, battery=battery, at=a.at), a.dir / "out" / "demo")
     else:
         panel, preview = build(a.dir, battery=battery or last_battery(a.dir), at=a.at)
@@ -93,7 +93,7 @@ def cmd_push(a: argparse.Namespace, quiet_offline: bool = False) -> None:
             (a.dir / "out").mkdir(exist_ok=True)
             (a.dir / "out" / "battery.json").write_text(json.dumps(battery))
         if getattr(a, "demo", False):  # sample data only: safe to photograph and share
-            from rmdash import demo
+            from unremarkable import demo
             fake = {"level": a.battery_pct, "charging": False} if a.battery_pct is not None else None
             panel, _ = render.render(demo.collect(a.dir, battery=fake, at=a.at), a.dir / "out" / "demo")
         else:
@@ -148,7 +148,7 @@ def cmd_tablet(a: argparse.Namespace) -> None:
                 print(f"Backed up documents to {dest} ({size / 1e6:.1f} MB)")
                 print("Screen:", t.install())
                 t.busy(False)
-                print("Ready. Next: rmdash push")
+                print("Ready. Next: tabloid push")
             elif a.action == "restore":
                 t.restore()
                 print("Normal reMarkable interface restarted")
@@ -158,13 +158,13 @@ def cmd_tablet(a: argparse.Namespace) -> None:
                 t.busy(False)
             elif a.action == "uninstall":
                 t.uninstall()
-                print("Removed rmdash from the tablet and restarted the normal interface")
+                print("Removed tabloid from the tablet and restarted the normal interface")
     except device.TabletError as e:
         sys.exit(str(e))
 
 
 def cmd_sports(a: argparse.Namespace) -> None:
-    from rmdash.sources.sports import search
+    from unremarkable.sources.sports import search
 
     rows = search(a.query)
     if not rows:
@@ -176,7 +176,7 @@ def cmd_sports(a: argparse.Namespace) -> None:
 
 
 def cmd_ticktick(a: argparse.Namespace) -> None:
-    from rmdash.sources import ticktick
+    from unremarkable.sources import ticktick
 
     ticktick.login(a.dir, device.load_env(a.dir))
 
@@ -193,7 +193,7 @@ def cmd_schedule(a: argparse.Namespace) -> None:
 
 
 def cmd_setup(a: argparse.Namespace) -> None:
-    from rmdash import wizard
+    from unremarkable import wizard
     wizard.run(a.dir)
 
 
@@ -202,7 +202,7 @@ def hhmm(v: str) -> dt.time:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(prog="rmdash", description="reMarkable home dashboard")
+    p = argparse.ArgumentParser(prog="tabloid", description="reMarkable home dashboard")
     p.add_argument("--dir", type=Path, default=Path.cwd(), help="project folder (default: current)")
     sub = p.add_subparsers(dest="cmd", required=True)
 

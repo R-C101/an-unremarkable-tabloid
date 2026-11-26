@@ -11,7 +11,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from typing import Any
 
-from rmdash.http import TIMEOUT, USER_AGENT, get_json
+from unremarkable.http import TIMEOUT, USER_AGENT, get_json
 
 
 def _get(url: str, tries: int = 2) -> bytes:

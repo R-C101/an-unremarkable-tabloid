@@ -1,14 +1,14 @@
 #!/bin/sh
-# rmdash sleep loop: runs on the tablet so it sleeps between refreshes.
+# tabloid sleep loop: runs on the tablet so it sleeps between refreshes.
 #
 # The tablet stays awake for AWAKE seconds after every EVERY-second boundary
 # of local time (e.g. :00 and :30), so the computer can push a new image.
 # The rest of the time it is in deep sleep ("mem"), drawing almost nothing.
 # E-ink keeps showing the last image while it sleeps.
 #
-# Started by rmdash as a transient systemd unit (systemd-run), so it never
+# Started by tabloid as a transient systemd unit (systemd-run), so it never
 # survives a reboot: restarting the tablet always brings back the normal UI.
-# Nothing here writes outside /home/root/rmdash, apart from the kernel's own
+# Nothing here writes outside /home/root/tabloid, apart from the kernel's own
 # runtime switches (/sys/class/rtc/rtc0/wakealarm, /sys/power/state).
 #
 # Files the computer may leave in DIR:
@@ -17,9 +17,9 @@
 #   hold    stay awake until it is removed (maintenance)
 #
 # Pressing the power button wakes it early; it then stays awake for MANUAL
-# seconds so the computer can reach it (e.g. `rmdash push` or `tablet restore`).
+# seconds so the computer can reach it (e.g. `tabloid push` or `tablet restore`).
 
-DIR=/home/root/rmdash
+DIR=/home/root/tabloid
 EVERY=${1:-1800}
 AWAKE=${2:-180}
 MANUAL=${3:-300}
