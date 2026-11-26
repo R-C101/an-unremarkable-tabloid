@@ -47,6 +47,7 @@ def screenshot(page_html: str, w: int, h: int) -> Image.Image:
             page = browser.new_page(viewport={"width": w, "height": h}, device_scale_factor=1)
             page.goto(src.as_uri())
             page.evaluate("document.fonts.ready")
+            page.wait_for_selector("body[data-ready]", timeout=10_000)
             page.screenshot(path=str(png))
             browser.close()
         return Image.open(png).convert("L")
