@@ -190,6 +190,11 @@ def calendar(cfg: dict[str, Any], tz: ZoneInfo, today: dt.date) -> dict[str, Any
                 else:
                     s = s.astimezone(tz) if s.tzinfo else s.replace(tzinfo=tz)
                     sday, when = s.date(), s
+                e_end = ev.get("DTEND").dt if ev.get("DTEND") else None
+                if isinstance(e_end, dt.datetime):
+                    e_end = e_end.astimezone(tz) if e_end.tzinfo else e_end.replace(tzinfo=tz)
+                    if e_end < dt.datetime.now(tz):
+                        continue  # already over
                 events.append({"day": sday, "start": when, "all_day": all_day,
                                "title": str(ev.get("SUMMARY", "(no title)")).strip(),
                                "time": "All day" if all_day else fmt_time(when)})
