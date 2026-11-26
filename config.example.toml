@@ -1,0 +1,42 @@
+# Copy to config.toml (or run `rmdash init --city "Your City"`) and edit.
+
+[dashboard]
+title = "The House"
+orientation = "landscape"   # "landscape" or "portrait"
+rotate = 90                 # landscape only: 90 or 270. If it's upside down, switch it.
+
+[location]
+name = "New York, NY"
+latitude = 40.7128
+longitude = -74.006
+timezone = "America/New_York"   # or "auto"
+
+[units]
+temperature = "fahrenheit"  # or "celsius"
+aqi = "us"                  # "us" or "european"
+
+[air_quality]
+enabled = true
+
+[calendar]
+# Secret iCal links. Google Calendar: Settings > your calendar > "Secret address in iCal format".
+# Apple iCloud: share calendar publicly and use the webcal:// link.
+ics_urls = []
+days_ahead = 3
+
+[notes]
+file = "notes.md"           # one item per line; shown as a list
+title = "Notes"
+
+[quotes]
+enabled = true
+file = "quotes.txt"         # "quote | author" per line; one is picked per day
+
+[schedule]
+minutes = 30
+
+[tablet]
+host = "10.11.99.1"         # USB. For Wi-Fi use the tablet's IP (see `rmdash tablet info`)
+user = "root"
+remote_dir = "/home/root/rmdash"
+# key = "~/.ssh/remarkable_dashboard"

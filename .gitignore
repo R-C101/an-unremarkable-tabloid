@@ -1,0 +1,15 @@
+# secrets and local config
+.env
+config.toml
+notes.md
+
+# generated
+.venv/
+__pycache__/
+*.pyc
+out/
+logs/
+backup/
+
+# reference clone of usetrmnl/trmnl-remarkable (not part of this project)
+trmnl-remarkable/
