@@ -1,7 +1,7 @@
 [project]
 name = "rmdash"
 version = "0.1.0"
-description = "Turn a reMarkable tablet into a home dashboard (weather, air quality, calendar, notes)"
+description = "Turn a reMarkable tablet into an e-ink wall dashboard: weather, air quality, calendar, tasks and sports"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"

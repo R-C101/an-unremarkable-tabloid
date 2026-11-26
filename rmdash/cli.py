@@ -55,7 +55,11 @@ def cmd_init(a: argparse.Namespace) -> None:
 
 
 def cmd_preview(a: argparse.Namespace) -> None:
-    panel, preview = build(a.dir)
+    if a.demo:
+        from rmdash import demo
+        panel, preview = render.render(demo.collect(a.dir), a.dir / "out" / "demo")
+    else:
+        panel, preview = build(a.dir)
     print(f"Preview: {preview}\nPanel image: {panel}")
     if not a.no_open:
         open_file(preview)
@@ -155,6 +159,7 @@ def main() -> None:
 
     s = sub.add_parser("preview", help="render the dashboard to out/preview.png")
     s.add_argument("--no-open", action="store_true")
+    s.add_argument("--demo", action="store_true", help="use sample data (no config or accounts needed)")
     s.set_defaults(fn=cmd_preview)
 
     sub.add_parser("push", help="render and show it on the tablet now").set_defaults(fn=cmd_push)

@@ -26,12 +26,31 @@ data.py ─► templates/dashboard.html ─► render.py ─► device.py ──
 - `device/main.go`: source of `rmdash/bin/rmdash-show-armv7`.
 - `trmnl-remarkable/`: a git-ignored reference clone of usetrmnl/trmnl-remarkable. It is not part of this project.
 
+## Setup playbook (for agents setting this up for someone)
+
+Work through these in order, and tell the user what each step is for. Never print `.env` or calendar links back to them.
+
+1. `uv sync`, then `uv run rmdash preview --demo --no-open` to check the toolchain. The first run downloads Chromium.
+2. Ask for their city and a dashboard title, then run `uv run rmdash init --city "<city>"`. Set `title`, units and `rotate` in config.toml.
+3. Ask which modules they want (weather/AQI on by default; calendar, TickTick, sports, notes, quotes). For each one, follow
+   the matching README section. Secrets go in `.env`, created by copying `.env.example`; settings go in config.toml.
+   Sports: `uv run rmdash sports search "<team>"`, then paste the block. TickTick: they create the developer app, then
+   `uv run rmdash ticktick login` (it opens a browser; run it in the background and wait for "Saved").
+4. `uv run rmdash preview` and show them `out/preview.png`. Iterate on the design until they're happy.
+5. Tablet: they read the SSH password from **Settings → Help → Copyrights and licenses**. Put it in `.env` as
+   `RM_PASSWORD` along with `RM_HOST` (`10.11.99.1` over USB, otherwise the Wi-Fi IP). Then run `uv run rmdash tablet setup`,
+   which installs the key, backs up their notebooks and installs the binary. Then `uv run rmdash push`, and ask them to confirm the screen.
+6. `uv run rmdash schedule install`. On macOS, if the repo is under Documents/Desktop/Downloads, warn them about the
+   one-time "access files" prompt before it appears.
+7. Tell them how to get the normal tablet UI back: `uv run rmdash tablet restore`, or a restart.
+
 ## Commands
 
 ```sh
 uv sync                                   # install deps (Python ≥3.11)
 uv run rmdash init --city "Austin, TX"    # writes config.toml (git-ignored)
 uv run rmdash preview                     # renders out/preview.png and opens it. Use this to check design changes.
+uv run rmdash preview --demo              # sample data, no accounts needed: use for README/bug-report screenshots
 uv run rmdash tablet setup                # installs SSH key, backs up documents, installs binary
 uv run rmdash push                        # render and show on tablet now
 uv run rmdash schedule install            # refresh every N minutes while the computer is on
@@ -47,6 +66,8 @@ cd device && go test ./... && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
 - `.env` holds `RM_HOST`, `RM_USER` and `RM_PASSWORD` (the tablet's root SSH password). It is git-ignored.
   **Never print, commit or echo its contents.** After `rmdash tablet setup` the key at
   `~/.ssh/remarkable_dashboard` is used and the password is only a fallback.
+- `.env.example` documents every variable. `load_env` also accepts `RM_*`, `WAQI_*` and `TICKTICK_*` from the environment,
+  and supports quoted values and trailing `# comments`.
 - `config.toml`, `notes.md`, `out/`, `logs/` and `backup/` are git-ignored. Calendar iCal links in config.toml are secret.
 
 ## Tablet safety rules (do not relax)
@@ -99,7 +120,7 @@ shows it parked in `open()`.
    team picker, cricket, etc. It writes config.toml and .env, walks through tablet pairing (password →
    key) and the OAuth logins, and installs the schedule. Target: no terminal needed. Ship for macOS and Windows.
 2. Candidate modules, all free:
-   - Cricket fixtures (India / IPL team): CricAPI free tier (key) or ESPNcricinfo. ESPN's site API doesn't cover cricket schedules.
+   - Cricket: ESPN's `sports/cricket/scorepanel` (no key) has live and scheduled matches (verified Nov 2026). Team-schedule paths 404, so filter by team name.
    - Holidays and festivals: Google public holiday ICS (e.g. Indian holidays). Already works via `calendar.ics_urls`.
    - Countdowns and birthdays (local config), moon phase (computed), UV index and rain nowcast (Open-Meteo).
    - Currency (Frankfurter, no key), crypto (CoinGecko), indices (unofficial Yahoo, fragile).
@@ -107,5 +128,6 @@ shows it parked in `open()`.
    - Picture of the day dithered to 16 greys: NASA APOD (DEMO_KEY) or Met Museum public-domain art. XKCD.
    - F1 next race (jolpica-f1, no key), GitHub contribution graph, Wi-Fi guest QR code (local),
      tablet battery in the footer.
+   Researched list with verified endpoints: docs/module-ideas.md.
 3. Cricket and multi-team sports layout, and a portrait layout pass.
 4. Pull mode (tablet fetches the PNG and sleeps with rtcwake) for setups that aren't on a charger.

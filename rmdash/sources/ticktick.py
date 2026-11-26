@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from rmdash.data import fmt_time
 from rmdash.http import get_json, post_form
 
 AUTH_URL = "https://ticktick.com/oauth/authorize"
@@ -154,7 +155,7 @@ def tasks(cfg: dict[str, Any], base: Path, env: dict[str, str], tz: ZoneInfo) ->
         if d < today:
             return "Overdue"
         day = "Today" if d == today else ("Tomorrow" if d == today + dt.timedelta(days=1) else d.strftime("%a"))
-        return day if i["all_day"] else f"{day} {i['due'].strftime('%-I:%M %p')}"
+        return day if i["all_day"] else f"{day} {fmt_time(i['due'])}"
 
     if tcfg.get("only_due", False):
         items = [i for i in items if i["due"] and i["due"].date() <= today + dt.timedelta(days=horizon)]

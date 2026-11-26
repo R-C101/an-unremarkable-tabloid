@@ -12,6 +12,7 @@ from __future__ import annotations
 import io
 import os
 import posixpath
+import re
 import shlex
 from importlib import resources
 from pathlib import Path
@@ -49,8 +50,13 @@ def load_env(base: Path) -> dict[str, str]:
             ln = ln.strip()
             if ln and not ln.startswith("#") and "=" in ln:
                 k, _, v = ln.partition("=")
-                env[k.strip()] = v.strip().strip("'\"")
-    env.update({k: v for k, v in os.environ.items() if k.startswith("RM_")})
+                v = v.strip()
+                if v[:1] in "'\"" and v[:1] and v.count(v[0]) >= 2:
+                    v = v[1:v.index(v[0], 1)]          # quoted: keep everything inside
+                else:
+                    v = re.split(r"\s+#", v, maxsplit=1)[0]  # unquoted: drop " # comment"
+                env[k.strip()] = v
+    env.update({k: v for k, v in os.environ.items() if k.startswith(("RM_", "WAQI_", "TICKTICK_"))})
     return env
 
 

@@ -1,11 +1,13 @@
 # Copy to config.toml (or run `rmdash init --city "Your City"`) and edit.
+# config.toml is git-ignored, because calendar links in it are private.
+# Secrets (tablet password, API tokens) go in .env instead. See .env.example.
 
 [dashboard]
-title = "The House"
+title = "The Morning Edition"   # the masthead. Make it yours: "The Smith Times", "Daily Planet"...
 orientation = "landscape"   # "landscape" or "portrait"
 rotate = 90                 # landscape only: 90 or 270. If it's upside down, switch it.
 
-[location]
+[location]                  # used for weather and air quality
 name = "New York, NY"
 latitude = 40.7128
 longitude = -74.006
@@ -13,16 +15,36 @@ timezone = "America/New_York"   # or "auto"
 
 [units]
 temperature = "fahrenheit"  # or "celsius"
+wind = "mph"                # "mph", "kmh", "ms" or "kn"
 aqi = "us"                  # "us" or "european"
 
 [air_quality]
-enabled = true
+enabled = true              # put WAQI_TOKEN in .env to use the nearest ground station
 
 [calendar]
-# Secret iCal links. Google Calendar: Settings > your calendar > "Secret address in iCal format".
-# Apple iCloud: share calendar publicly and use the webcal:// link.
+# Any number of iCal (.ics) links. These are private: anyone with the link can read the calendar.
+#   Google:  Settings → (your calendar) → Integrate calendar → "Secret address in iCal format"
+#   iCloud:  Calendar app → share calendar → Public Calendar → copy the webcal:// link
+#   Outlook: Settings → Calendar → Shared calendars → Publish a calendar → ICS link
+# Public holidays, e.g. India:
+#   https://calendar.google.com/calendar/ical/en.indian%23holiday%40group.v.calendar.google.com/public/basic.ics
 ics_urls = []
 days_ahead = 3
+
+[ticktick]
+enabled = false             # true, then run `rmdash ticktick login` (see .env.example)
+lists = []                  # e.g. ["Work", "Personal"]; each list gets a column. Empty = all lists.
+only_due = false            # true = only tasks due within days_ahead
+days_ahead = 2
+max_items = 7               # per list (the layout trims more if space runs out)
+
+# Sports: any team ESPN covers (football/soccer, NBA, NFL, MLB, NHL, college...).
+# Find yours with:  rmdash sports search "arsenal"   and paste the block it prints.
+# [[sports]]
+# name = "Arsenal"
+# sport = "soccer"
+# league = "eng.1"
+# team_id = 359
 
 [notes]
 file = "notes.md"           # one item per line; shown as a list
@@ -36,7 +58,7 @@ file = "quotes.txt"         # "quote | author" per line; one is picked per day
 minutes = 30
 
 [tablet]
-host = "10.11.99.1"         # USB. For Wi-Fi use the tablet's IP (see `rmdash tablet info`)
+host = "10.11.99.1"         # USB. For Wi-Fi use the tablet's IP (see `rmdash tablet info`). RM_HOST in .env wins.
 user = "root"
 remote_dir = "/home/root/rmdash"
 # key = "~/.ssh/remarkable_dashboard"

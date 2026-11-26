@@ -17,6 +17,7 @@ import datetime as dt
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from rmdash.data import fmt_time
 from rmdash.http import get_json
 
 SITE = "https://site.api.espn.com/apis/site/v2/sports"
@@ -76,7 +77,7 @@ def team_card(t: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
         card["next"] = {
             "opponent": _name(them), "home": us.get("homeAway") == "home",
             "competition": NICE.get(lg, lg.replace("Spanish ", "")),
-            "day": kick.strftime("%a %b %-d"), "time": kick.strftime("%-I:%M %p"),
+            "day": f"{kick:%a %b} {kick.day}", "time": fmt_time(kick),
             "venue": (comp.get("venue") or {}).get("fullName", ""),
             "days_away": (kick.date() - dt.datetime.now(tz).date()).days,
         }
