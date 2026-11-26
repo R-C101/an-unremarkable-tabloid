@@ -68,7 +68,7 @@ If you have an rM2 or Paper Pro and want to help, [open an issue](../../issues/n
 ## Quick start
 
 First get the code: click the green **Code** button on GitHub, then **Download ZIP**, and unzip it. If you use git, run
-`git clone https://github.com/OWNER/an-unremarkable-tabloid.git` instead.
+`git clone https://github.com/R-C101/an-unremarkable-tabloid.git` instead.
 
 ### Option A: the setup wizard (recommended)
 
@@ -440,6 +440,8 @@ Contributions are welcome, from a typo fix to a whole new module.
   [suggest a module](../../issues/new?template=module_idea.md). Ideas are welcome even if you can't build them.
 - **Have an rM2 or Paper Pro?** Tell us in an issue. Testing on real hardware is the main thing blocking support.
 - **Want to code?** See [CONTRIBUTING.md](CONTRIBUTING.md). You don't need a tablet to work on modules or the design.
+
+If you like it, a ⭐ on the repo helps other reMarkable owners find it.
 
 ## Credits and license
 
