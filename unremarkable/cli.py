@@ -44,7 +44,9 @@ def cmd_init(a: argparse.Namespace) -> None:
     text = (base / "config.example.toml").read_text("utf-8")
     if a.city:
         place = data.geocode(a.city)
-        text = re.sub(r'(?m)^name = .*$', f'name = "{place["name"]}"', text, count=1)
+        # The place name belongs to [location]; the first `name =` in the file is [dashboard]'s greeting name.
+        text = re.sub(r'(?ms)^(\[location\][^\[]*?^name = ).*?$',
+                      lambda m: f'{m.group(1)}"{place["name"]}"', text, count=1)
         text = re.sub(r'(?m)^latitude = .*$', f'latitude = {place["latitude"]}', text, count=1)
         text = re.sub(r'(?m)^longitude = .*$', f'longitude = {place["longitude"]}', text, count=1)
         text = re.sub(r'(?m)^timezone = .*$', f'timezone = "{place["timezone"]}"', text, count=1)
