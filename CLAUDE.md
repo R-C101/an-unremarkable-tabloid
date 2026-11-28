@@ -40,7 +40,8 @@ drive it from an agent; follow the steps below instead.
 Work through these in order, and tell the user what each step is for. Never print `.env` or calendar links back to them.
 
 1. `uv sync`, then `uv run tabloid preview --demo --no-open` to check the toolchain. The first run downloads Chromium.
-2. Ask for their city and a dashboard title, then run `uv run tabloid init --city "<city>"`. Set `title`, units and `rotate` in config.toml.
+2. Ask for their city and a dashboard title, then run `uv run tabloid init --city "<city>"` (it picks °C, or °F for US
+   cities; `--celsius` / `--fahrenheit` override). Set `title`, other units and `rotate` in config.toml.
 3. Ask which modules they want (weather/AQI on by default; calendar, TickTick, sports, notes, quotes). For each one, follow
    the matching README section. Secrets go in `.env`, created by copying `.env.example`; settings go in config.toml.
    Sports: `uv run tabloid sports search "<team>"`, then paste the block. TickTick: they create the developer app, then

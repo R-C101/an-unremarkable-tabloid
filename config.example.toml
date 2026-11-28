@@ -26,7 +26,7 @@ longitude = -74.006
 timezone = "America/New_York"   # or "auto"
 
 [units]
-temperature = "fahrenheit"  # or "celsius"
+temperature = "fahrenheit"  # "fahrenheit" or "celsius"
 wind = "mph"                # "mph", "kmh", "ms" or "kn"
 aqi = "us"                  # "us" or "european"
 

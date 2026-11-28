@@ -143,6 +143,8 @@ uv run tabloid init --city "Lisbon"      # looks up your coordinates and writes 
 uv run tabloid preview                   # opens out/preview.png. The first run downloads a headless browser.
 ```
 
+`init` picks °C, or °F for US cities. Add `--celsius` or `--fahrenheit` to choose yourself.
+
 Then edit `config.toml` using the [module guides](#setting-up-each-module) below.
 
 **3. Put the tablet password in `.env`.** See [Secrets and the `.env` file](#secrets-and-the-env-file) below.
