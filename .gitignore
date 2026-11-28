@@ -10,6 +10,7 @@ __pycache__/
 out/
 logs/
 backup/
+device/rm2/build/
 
 # reference clone of usetrmnl/trmnl-remarkable (not part of this project)
 trmnl-remarkable/

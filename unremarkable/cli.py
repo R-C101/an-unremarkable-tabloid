@@ -42,13 +42,24 @@ def cmd_init(a: argparse.Namespace) -> None:
     if cfg_path.exists() and not a.force:
         sys.exit("config.toml already exists (use --force to overwrite)")
     text = (base / "config.example.toml").read_text("utf-8")
+    temperature = "celsius" if a.celsius else "fahrenheit" if a.fahrenheit else None
     if a.city:
         place = data.geocode(a.city)
-        text = re.sub(r'(?m)^name = .*$', f'name = "{place["name"]}"', text, count=1)
+        # The place name belongs to [location]; the first `name =` in the file is [dashboard]'s greeting name.
+        text = re.sub(r'(?ms)^(\[location\][^\[]*?^name = ).*?$',
+                      lambda m: f'{m.group(1)}"{place["name"]}"', text, count=1)
         text = re.sub(r'(?m)^latitude = .*$', f'latitude = {place["latitude"]}', text, count=1)
         text = re.sub(r'(?m)^longitude = .*$', f'longitude = {place["longitude"]}', text, count=1)
         text = re.sub(r'(?m)^timezone = .*$', f'timezone = "{place["timezone"]}"', text, count=1)
         print(f"Location: {place['name']} ({place['latitude']}, {place['longitude']})")
+        if temperature is None:  # same default as `tabloid setup`: °F for US places, °C everywhere else
+            temperature = "fahrenheit" if place["name"].endswith(", US") else "celsius"
+    if temperature:
+        wind = "mph" if temperature == "fahrenheit" else "kmh"
+        text = re.sub(r'(?m)^temperature = "\w*"', f'temperature = "{temperature}"', text, count=1)
+        text = re.sub(r'(?m)^wind = "\w*"', f'wind = "{wind}"', text, count=1)
+        print(f"Units: °{'F' if temperature == 'fahrenheit' else 'C'}, wind in {wind} "
+              "(pick with --celsius or --fahrenheit, or edit [units] in config.toml)")
     cfg_path.write_text(text, "utf-8")
     if not (base / "notes.md").exists() and (base / "notes.example.md").exists():
         shutil.copy(base / "notes.example.md", base / "notes.md")
@@ -211,6 +222,9 @@ def main() -> None:
 
     s = sub.add_parser("init", help="create config.toml non-interactively (see also: setup)")
     s.add_argument("--city", help="look up latitude/longitude for this place")
+    u = s.add_mutually_exclusive_group()
+    u.add_argument("--celsius", action="store_true", help="temperatures in °C (the default outside the US)")
+    u.add_argument("--fahrenheit", action="store_true", help="temperatures in °F (the default for US cities)")
     s.add_argument("--force", action="store_true")
     s.set_defaults(fn=cmd_init)
 

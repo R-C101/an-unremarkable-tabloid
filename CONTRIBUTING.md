@@ -38,6 +38,16 @@ cd device && go test ./... && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
   go build -trimpath -ldflags "-s -w" -o ../unremarkable/bin/tabloid-show-armv7 .
 ```
 
+`device/rm2/main.cpp` builds `unremarkable/bin/tabloid-show-rm2-armv7`, the reMarkable 2 version (C++, on top of
+the swtcon display driver). After changing it, on Linux or WSL:
+
+```sh
+sudo apt install g++-arm-linux-gnueabihf git curl
+sh device/rm2/build.sh
+```
+
+That binary is GPL-3.0 because of swtcon. See [device/rm2/README.md](device/rm2/README.md).
+
 Anything that runs on the tablet must follow the safety rules in [CLAUDE.md](CLAUDE.md#tablet-safety-rules-do-not-relax).
 In short: write only inside `/home/root/tabloid`, and never modify system files or disable the reMarkable app.
 
