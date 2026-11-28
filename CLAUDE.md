@@ -4,9 +4,10 @@ Guidance for coding agents working in this repo, including agents that set it up
 
 ## What this is
 
-**An Unremarkable Tabloid** (package `unremarkable`, command `tabloid`) turns a reMarkable 1 (and probably a reMarkable 2) into a wall dashboard. A computer
+**An Unremarkable Tabloid** (package `unremarkable`, command `tabloid`) turns a reMarkable 1 or 2 into a wall dashboard. A computer
 renders an HTML template to a 1404×1872 16-grey PNG, then pushes it over SSH to the tablet.
-A tiny Go binary on the tablet writes the image straight to the e-ink framebuffer.
+A small program on the tablet draws the image on the e-ink screen: on the reMarkable 1 a Go binary writes it
+straight to the framebuffer, on the reMarkable 2 a C++ binary drives the panel itself (see "Hardware facts").
 When the computer is off, nothing is pushed and the last image stays on screen (e-ink needs no power to hold it).
 
 ```
@@ -25,7 +26,10 @@ data.py ─► templates/dashboard.html ─► render.py ─► device.py ──
 - `unremarkable/render.py`: Playwright screenshot, then rotate (landscape) and snap to 16 greys.
 - `unremarkable/device.py`: SSH via paramiko (no system ssh/scp/sftp needed; uploads go through `cat >`).
 - `unremarkable/schedule.py`: LaunchAgent (macOS), Task Scheduler (Windows), crontab line (Linux).
-- `device/main.go`: source of `unremarkable/bin/tabloid-show-armv7`.
+- `device/main.go`: source of `unremarkable/bin/tabloid-show-armv7` (reMarkable 1).
+- `device/rm2/`: source and build script of `unremarkable/bin/tabloid-show-rm2-armv7` (reMarkable 2). That one
+  binary is GPL-3.0 because it links swtcon from timower/rM2-stuff; see `device/rm2/README.md`.
+  `device.show_binary()` picks the binary from the tablet's model.
 - `trmnl-remarkable/`: a git-ignored reference clone of usetrmnl/trmnl-remarkable. It is not part of this project.
 
 ## Setup playbook (for agents setting this up for someone)
@@ -64,6 +68,10 @@ uv run tabloid tablet restore              # bring back the normal reMarkable UI
 # rebuild the tablet binary after editing device/main.go
 cd device && go test ./... && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
   go build -trimpath -ldflags "-s -w" -o ../unremarkable/bin/tabloid-show-armv7 .
+
+# rebuild the reMarkable 2 binary after editing device/rm2/main.cpp (Linux or WSL;
+# needs g++-arm-linux-gnueabihf, git and curl; fetches pinned swtcon and stb_image sources)
+sh device/rm2/build.sh
 ```
 
 ## Secrets and local files
@@ -81,7 +89,9 @@ cd device && go test ./... && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
   the root filesystem, xochitl's files, or the bootloader. Don't install Toltec/XOVI or other system mods.
 - The only system changes are `systemctl stop xochitl` while the dashboard shows, and the sleep loop: a transient
   `systemd-run --unit=tabloid-sleep` unit running `/home/root/tabloid/sleep-loop.sh`. That loop writes only to kernel
-  runtime switches (`/sys/class/rtc/rtc0/wakealarm`, `/sys/power/state`). Transient units live in /run and vanish on reboot,
+  runtime switches (`/sys/class/rtc/rtc0/wakealarm`, `/sys/power/state`). On the reMarkable 2 it asks systemd for the
+  suspend instead (`systemctl start suspend.target`, as xochitl does), so the firmware's own Wi-Fi hook runs; see
+  "Battery and sleep". Transient units live in /run and vanish on reboot,
   so `tabloid tablet restore` or a reboot undoes everything. Don't `systemctl disable`/`mask` xochitl, and never install
   a persistent unit file.
 - Run `tabloid tablet backup` before anything new or risky on the device.
@@ -107,6 +117,11 @@ With xochitl stopped the rM1 never suspends by itself, so an always-awake tablet
 - Manual commands (`push`, `tablet …`) wait for the next window via `Tablet.connect_when_awake`.
 - Verified on rM1 3.29: `echo mem > /sys/power/state` with an RTC alarm suspends (deep), resumes on time, Wi-Fi
   reconnects on the same IP within seconds, and the framebuffer is unchanged (md5 before = after).
+- Verified on rM2 3.29.1.0 over USB (Nov 2026): the loop suspends with `systemctl start suspend.target` (deep), resumes
+  at the alarm, SSH over USB answers about 5 s after waking and Wi-Fi is back about 15 s after. **Don't write to
+  `/sys/power/state` directly on the rM2.** That skips the firmware's `/usr/lib/systemd/system-sleep/sleep-wifi.sh`,
+  which unbinds the Wi-Fi driver before suspend and binds it again after; without it the Wi-Fi chip stays dead until
+  a reboot (brcmfmac SDIO errors in dmesg). `sleep-loop.sh` picks the right way from `/sys/devices/soc0/machine`.
 
 ## Hardware facts
 
@@ -114,9 +129,22 @@ With xochitl stopped the rM1 never suspends by itself, so an always-awake tablet
   (line length is usually 1408 px). Refresh uses `MXCFB_SEND_UPDATE` (0x4048462E), GC16 waveform, full update.
 - Tested on a reMarkable 1 on firmware 3.29.1.0 (kernel 5.4.70). Verified working over Wi-Fi SSH (Nov 2026).
   Stopping xochitl leaves Wi-Fi (wpa_supplicant) up. xochitl is Restart=on-failure, so a clean stop stays stopped.
-- reMarkable 2 uses a different display path (needs rm2fb), so `tabloid-show` won't drive its screen yet.
-  Paper Pro / Move: aarch64, colour panel, SSH only in developer mode (which factory-resets). `device.unsupported()`
-  makes `tablet setup` refuse both before changing anything.
+- reMarkable 2: i.MX7 Dual, armv7l. It has no hardware display controller: `/dev/fb0` (`mxs-lcdif`, 260×23936 at
+  32 bpp) is the raw buffer of a software TCON that lives inside xochitl, so the rM1 program shows nothing on it.
+  `tabloid-show-rm2-armv7` (device/rm2) drives the panel with the swtcon library from timower/rM2-stuff instead. It
+  takes `/tmp/epd.lock`, reads the waveform file from `/var/lib/uboot/*.wbf` and the panel temperature from hwmon,
+  flashes the screen clean, does one GC16 update and powers the panel down: about 2.5 s per draw. It refuses to run
+  while xochitl holds the lock. If the first draw after stopping xochitl fails, `Tablet.show()` starts xochitl again.
+- Tested on a reMarkable 2 on firmware 3.29.1.0 (kernel 5.4.70, glibc 2.43) over USB (Nov 2026): a fresh install
+  through `push`, drawing, the sleep loop, `tablet restore`, and a reboot from dashboard mode (normal UI back, no
+  tabloid units left). Not tested: pushing over Wi-Fi. On that firmware SSH over Wi-Fi is off after a factory reset
+  (`dropbear-wlan.socket` waits for a marker file that the stock `rm-ssh-over-wlan on` command creates). tabloid
+  doesn't change that setting; the user turns it on.
+- rM2 dead ends, so nobody repeats them: the stock `/usr/bin/remarkable-shutdown` can't draw on the rM2 (it has no
+  panel driver inside), and ddvk's rm2fb hooks xochitl by per-version addresses and has none for firmware this new.
+- The tablet's shell tools are BusyBox: `head -1` is rejected on 3.29, so write `head -n 1`. `/bin/sh` is bash.
+- Paper Pro / Move: aarch64, colour panel, SSH only in developer mode (which factory-resets). `device.unsupported()`
+  makes `tablet setup` refuse them before changing anything.
 
 ## Design notes for the template
 

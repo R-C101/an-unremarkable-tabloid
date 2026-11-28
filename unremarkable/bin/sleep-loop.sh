@@ -10,6 +10,8 @@
 # survives a reboot: restarting the tablet always brings back the normal UI.
 # Nothing here writes outside /home/root/tabloid, apart from the kernel's own
 # runtime switches (/sys/class/rtc/rtc0/wakealarm, /sys/power/state).
+# On the reMarkable 2 the suspend itself is requested from systemd instead
+# (see deep_sleep() below), which is how xochitl does it.
 #
 # Files the computer may leave in DIR:
 #   offset  the computer's UTC offset in seconds, so windows follow local time
@@ -27,6 +29,16 @@ RTC=/sys/class/rtc/rtc0/wakealarm
 
 fresh() { [ -e "$1" ] && [ $(( $(date +%s) - $(stat -c %Y "$1") )) -lt 300 ]; }
 
+# Both forms return after waking. The reMarkable 2's Wi-Fi chip must be unbound
+# before suspend and bound again after, or it stays dead until a reboot. Its
+# firmware has a hook for that (/usr/lib/systemd/system-sleep/sleep-wifi.sh)
+# which only runs when systemd does the suspend, so ask systemd there.
+if grep -q "reMarkable 2" /sys/devices/soc0/machine 2>/dev/null; then
+  deep_sleep() { systemctl start suspend.target; }
+else
+  deep_sleep() { echo mem > /sys/power/state; }
+fi
+
 while true; do
   now=$(date +%s)
   off=$(cat "$DIR/offset" 2>/dev/null || echo 0)
@@ -42,7 +54,7 @@ while true; do
   echo "+$wake" > "$RTC"
   fresh "$DIR/busy" && continue  # a push started just now
   target=$(( $(date +%s) + wake ))
-  echo mem > /sys/power/state || sleep 30   # returns after waking (alarm or power button)
+  deep_sleep || sleep 30      # returns after waking (alarm or power button)
   if [ $(( target - $(date +%s) )) -gt 30 ]; then
     sleep "$MANUAL"             # woken early by the power button: stay reachable for a while
   else

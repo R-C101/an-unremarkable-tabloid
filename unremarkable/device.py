@@ -77,14 +77,22 @@ def window(every: int, awake: int, now: float | None = None) -> tuple[bool, floa
     return (True, awake - into) if into < awake else (False, every - into)
 
 
+def is_rm2(model: str) -> bool:
+    return "reMarkable 2" in model
+
+
+def show_binary(model: str) -> str:
+    """The bundled display program for this tablet. The reMarkable 2 has no hardware display
+    controller, so it needs its own (device/rm2); everything else gets the reMarkable 1 one."""
+    return "tabloid-show-rm2-armv7" if is_rm2(model) else "tabloid-show-armv7"
+
+
 def unsupported(model: str, arch: str) -> str | None:
-    """Why tabloid can't drive this tablet's screen yet, or None if it can (reMarkable 1)."""
-    if "reMarkable 2" in model:
-        return ("This is a reMarkable 2. Its screen isn't driven through the normal framebuffer, so tabloid "
-                "can't draw on it yet. Nothing was changed. See README 'Which reMarkable?'.")
-    if not arch.startswith("armv7") or ("reMarkable" in model and "reMarkable 1" not in model):
-        return (f"This tablet ({model or 'unknown model'}, {arch}) isn't supported yet; only the reMarkable 1 is. "
-                "Nothing was changed. See README 'Which reMarkable?'.")
+    """Why tabloid can't drive this tablet's screen yet, or None if it can (reMarkable 1 and 2)."""
+    known = "reMarkable 1" in model or is_rm2(model)
+    if not arch.startswith("armv7") or ("reMarkable" in model and not known):
+        return (f"This tablet ({model or 'unknown model'}, {arch}) isn't supported yet; only the reMarkable 1 "
+                "and 2 are. Nothing was changed. See README 'Which reMarkable?'.")
     return None
 
 
@@ -188,7 +196,7 @@ class Tablet:
             "echo model=$(cat /sys/devices/soc0/machine 2>/dev/null);"
             "echo arch=$(uname -m);"
             "echo firmware=$( (grep -h '^IMG_VERSION' /etc/os-release; grep -h REMARKABLE_RELEASE_VERSION "
-            "/usr/share/remarkable/update.conf) 2>/dev/null | head -1 | cut -d= -f2 | tr -d '\"');"
+            "/usr/share/remarkable/update.conf) 2>/dev/null | head -n 1 | cut -d= -f2 | tr -d '\"');"
             "echo build=$(cat /etc/version 2>/dev/null);"
             "echo xochitl=$(systemctl is-active xochitl);"
             "for d in /sys/class/power_supply/*; do [ -f $d/capacity ] && "
@@ -218,12 +226,16 @@ class Tablet:
                  f"(grep -qxF {shlex.quote(line)} ~/.ssh/authorized_keys || "
                  f"echo {shlex.quote(line)} >> ~/.ssh/authorized_keys) && chmod 600 ~/.ssh/authorized_keys")
 
+    def model(self) -> str:
+        return self.run("cat /sys/devices/soc0/machine 2>/dev/null", check=False).strip()
+
     def install(self) -> str:
         arch = self.run("uname -m").strip()
-        why = unsupported(self.run("cat /sys/devices/soc0/machine 2>/dev/null", check=False).strip(), arch)
+        model = self.model()
+        why = unsupported(model, arch)
         if why:
             raise TabletError(why)
-        binary = resources.files("unremarkable").joinpath("bin/tabloid-show-armv7").read_bytes()
+        binary = resources.files("unremarkable").joinpath(f"bin/{show_binary(model)}").read_bytes()
         self.run(f"mkdir -p {shlex.quote(self.remote_dir)}")
         self.put(binary, posixpath.join(self.remote_dir, "tabloid-show"), mode="755")
         return self.run(f"{shlex.quote(self.remote_dir)}/tabloid-show -info").strip()
@@ -239,10 +251,20 @@ class Tablet:
             self.install()
         self.put(png, posixpath.join(self.remote_dir, "dashboard.png"))
         # Stop the normal UI so it doesn't paint over the dashboard, then draw.
-        out = self.run(
-            "if systemctl is-active --quiet xochitl; then systemctl stop xochitl; sleep 2; fi; "
-            f"{d}/tabloid-show {d}/dashboard.png"
-        ).strip()
+        draw = f"{d}/tabloid-show {d}/dashboard.png"
+        if is_rm2(self.model()):
+            # The rM2 display program takes the screen over from xochitl. If it fails right after
+            # we stopped xochitl, start xochitl again rather than leave a frozen screen.
+            out = self.run(
+                "was=0; if systemctl is-active --quiet xochitl; then was=1; systemctl stop xochitl; sleep 2; fi; "
+                f"{draw}; rc=$?; "
+                "if [ $rc -ne 0 ] && [ $was = 1 ]; then systemctl start xochitl; fi; exit $rc"
+            ).strip()
+        else:
+            out = self.run(
+                "if systemctl is-active --quiet xochitl; then systemctl stop xochitl; sleep 2; fi; "
+                f"{draw}"
+            ).strip()
         if self.sleep:
             self.start_sleeping()
         else:
@@ -251,7 +273,8 @@ class Tablet:
 
     def start_sleeping(self) -> None:
         """(Re)start the sleep loop as a transient unit: it disappears on reboot."""
-        script = resources.files("unremarkable").joinpath("bin/sleep-loop.sh").read_bytes()
+        # A Windows checkout with autocrlf has CRLF here, which the tablet's shell can't run.
+        script = resources.files("unremarkable").joinpath("bin/sleep-loop.sh").read_bytes().replace(b"\r\n", b"\n")
         path = posixpath.join(self.remote_dir, "sleep-loop.sh")
         self.put(str(local_offset()).encode(), posixpath.join(self.remote_dir, "offset"))
         current = self.run(f"cat {shlex.quote(path)} 2>/dev/null", check=False).encode()

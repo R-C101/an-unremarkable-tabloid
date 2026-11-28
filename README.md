@@ -49,7 +49,7 @@ More modules are planned; see [Roadmap](#roadmap).
 
 ## What you need
 
-- A **reMarkable 1**. That's the only model tested so far. See [Which reMarkable?](#which-remarkable) for the others.
+- A **reMarkable 1** or **reMarkable 2**. See [Which reMarkable?](#which-remarkable) for what's been tested, and for the Paper Pro.
 - A Mac, Windows or Linux computer that's on for at least part of the day.
 - The tablet on the same Wi-Fi as the computer, or connected by a USB data cable.
 - About 15 minutes. No coding needed.
@@ -59,11 +59,11 @@ More modules are planned; see [Roadmap](#roadmap).
 | Model | Status | Notes |
 |---|---|---|
 | **reMarkable 1** | ✅ Works, tested | Tested on software 3.29 over Wi-Fi and USB, including sleep between refreshes. |
-| **reMarkable 2** | ❌ Not yet | Pairing and SSH work the same way (same password screen). But the rM2's screen isn't driven through the normal framebuffer, so the display program can't draw to it yet. It would need [rm2fb](https://github.com/ddvk/remarkable2-framebuffer)-style support. Help wanted. |
+| **reMarkable 2** | ✅ Works, tested over USB | Tested on software 3.29.1.0 over USB, including sleep between refreshes. The rM2's screen isn't driven through the normal framebuffer, so it gets its own display program ([source](device/rm2)), built on the [swtcon](https://github.com/timower/rM2-stuff) driver. No Toltec or other system mods. Pushing over Wi-Fi hasn't been tested yet: on this software, SSH over Wi-Fi is off after a factory reset until you turn it on with the tablet's own `rm-ssh-over-wlan on` command (over USB). Other software versions are untested; reports welcome. |
 | **reMarkable Paper Pro / Paper Pro Move** | ❌ Not yet | SSH is only available in *developer mode*, and turning that on **factory-resets the tablet**. It's a different chip (64-bit) with a colour screen and different display hardware. Help wanted. |
 
 `tabloid tablet setup` checks the model and refuses to install on a tablet it can't drive, so trying it is harmless.
-**Have an rM2 or Paper Pro?** You can probably add support in an evening with a coding agent: see
+**Have a Paper Pro?** You can probably add support in an evening with a coding agent: see
 [docs/porting.md](docs/porting.md) for a ready-to-paste prompt and the safety rules, or
 [open an issue](../../issues/new?template=device_support.md) with what you find.
 
@@ -397,7 +397,7 @@ mods and redoing them after every reMarkable update. That's how projects like
 [trmnl-remarkable](https://github.com/usetrmnl/trmnl-remarkable) work. A "pull" mode, where the tablet fetches the image
 on its own and sleeps in between, is on the roadmap for setups without a computer that's always on.
 
-**reMarkable 2 / Paper Pro?** Not yet. See [Which reMarkable?](#which-remarkable). Help is very welcome.
+**reMarkable 2 / Paper Pro?** The reMarkable 2 works. The Paper Pro doesn't yet. See [Which reMarkable?](#which-remarkable). Help is very welcome.
 
 **Does it work on Windows?** Yes. The installer, the wizard, rendering, SSH and the automatic refresh (Task Scheduler)
 all have Windows support, and CI builds and renders on Windows on every change. Day-to-day use has been tested on a Mac
@@ -418,13 +418,15 @@ your computer (every 30 min)                                         reMarkable 
 3. The PNG is uploaded over SSH ([paramiko](https://www.paramiko.org), so no system `ssh` is needed) and written atomically.
 4. On the tablet, `tabloid-show`, a 1.8 MB static Go program ([source](device/main.go)), stops the reMarkable app so it
    doesn't draw over the dashboard. It then writes the image to the framebuffer and triggers a full e-ink refresh.
+   The reMarkable 2 has no display controller to ask, so there `tabloid-show` is a different small program
+   ([source](device/rm2)) that drives the panel itself for the couple of seconds a refresh takes.
 5. A small [sleep loop](unremarkable/bin/sleep-loop.sh) runs as a temporary systemd unit. It puts the tablet into deep sleep
    with a wake-up alarm set for the next refresh, so the tablet lasts days instead of hours. The scheduled job on your
    computer runs at the same times (:00, :30), waits for the tablet to come online, and keeps it awake until the push is done.
 
 ## Roadmap
 
-- reMarkable 2 and Paper Pro support (needs someone with the hardware)
+- Paper Pro support (needs someone with the hardware)
 - More modules, all free: cricket, F1, countdowns and birthdays, moon phase and UV, currency rates,
   art or NASA picture of the day dithered for e-ink, a Wi-Fi guest QR code. See [docs/module-ideas.md](docs/module-ideas.md).
 - More to-do apps (Todoist, Google Tasks, Microsoft To Do)
@@ -440,7 +442,7 @@ Contributions are welcome, from a typo fix to a whole new module.
   `tabloid preview --demo` are safe to share; don't paste your `.env` or `config.toml`.
 - **Want a feature or a new module?** [Open a feature request](../../issues/new?template=feature_request.md) or
   [suggest a module](../../issues/new?template=module_idea.md). Ideas are welcome even if you can't build them.
-- **Have an rM2 or Paper Pro?** That's the most wanted help. See [docs/porting.md](docs/porting.md): clone it, point
+- **Have a Paper Pro, or an rM2 on other software?** That's the most wanted help. See [docs/porting.md](docs/porting.md): clone it, point
   Claude Code or another agent at it with the prompt there, and share what you find.
 - **Want to code?** See [CONTRIBUTING.md](CONTRIBUTING.md). You don't need a tablet to work on modules or the design.
 

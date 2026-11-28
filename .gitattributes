@@ -1,0 +1,3 @@
+# Shell scripts are uploaded to the tablet (sleep-loop.sh) or run by sh/bash,
+# so they must keep LF line endings even on a Windows checkout with autocrlf.
+*.sh text eol=lf
