@@ -74,6 +74,8 @@
   .now { display: flex; align-items: center; gap: 22px; }
   .now .temp { font-family: "Fraunces"; font-weight: 640; font-size: 196px; line-height: .82; letter-spacing: -6px; }
   .now .temp sup { font-size: 90px; vertical-align: top; position: relative; top: 8px; letter-spacing: 0; }
+  /* the C or F after the degree sign, raised so its top lines up with the sign */
+  .now .temp sup .unit { font-size: 62px; margin-left: 3px; position: relative; top: -20px; }
   .cond { font-family: "Fraunces"; font-style: italic; font-size: 42px; margin-top: 14px; }
   .feels { color: var(--soft); font-size: 26px; margin-top: 4px; }
   .hilo { display: flex; gap: 36px; margin-top: 26px; font-family: "Fraunces"; font-size: 54px; font-weight: 600; }
@@ -253,7 +255,7 @@
     <div class="wx">
     {% if weather %}
       {% set w = weather %}
-      <div class="now">{{ icon(w.icon, 150) }}<div class="temp">{{ w.temp }}<sup>°</sup></div></div>
+      <div class="now">{{ icon(w.icon, 150) }}<div class="temp">{{ w.temp }}<sup>°<span class="unit">{{ w.unit }}</span></sup></div></div>
       <div class="cond">{{ w.text }}</div>
       <div class="feels">Feels like {{ w.feels }}° · {{ w.today.text }} today{% if w.today.rain %}, {{ w.today.rain }}% rain{% endif %}</div>
       <div class="hilo"><span><small>HIGH</small>{{ w.today.high }}°</span><span><small>LOW</small>{{ w.today.low }}°</span></div>
